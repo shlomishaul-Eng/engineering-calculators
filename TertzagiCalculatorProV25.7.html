@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מחשבון הנדסי וחשבון סופי - V25.7 - מתוקן</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-body: linear-gradient(to bottom right, #f3f4f6, #e5e7eb);
+            --bg-main: #ffffff;
+            --text-main: #1F2937;
+            --text-secondary: #4b5563;
+            --border-color: #D1D5DB;
+            --section-border: #4F46E5;
+            --warning-bg: #fffbeb;
+            --warning-border: #fbbF24;
+            --warning-text: #b45309;
+            --result-bg: #EFF6FF;
+            --result-border: #BFDBFE;
+            --result-title-text: #1E40AF;
+            --result-value-text: #1D4ED8;
+            --solution-step-bg: #f9fafb;
+            --tab-active-bg: #ffffff;
+            --tab-inactive-bg: #e5e7eb;
+            --tab-active-text: #4F46E5;
+            --tab-inactive-text: #4b5563;
+            --btn-mode-active-bg: #ffffff;
+            --btn-mode-active-text: #4F46E5;
+            --btn-mode-inactive-bg: transparent;
+            --btn-mode-inactive-text: #4b5563;
+            --btn-success-bg: #10B981;
+            --btn-danger-bg: #EF4444;
+            --header-controls-bg: rgba(229, 231, 235, 0.5);
+            --group-header-bg: #eef2ff;
+            --group-component-bg: #f8fafc;
+        }
+        .dark {
+            --bg-body: linear-gradient(to bottom right, #000000, #111827, #1F2937);
+            --bg-main: #1F2937;
+            --text-main: #E5E7EB;
+            --text-secondary: #9CA3AF;
+            --border-color: #4B5563;
+            --section-border: #818CF8;
+            --warning-bg: #422006;
+            --warning-text: #fef3c7;
+            --result-bg: #1E3A8A;
+            --result-border: #3B82F6;
+            --result-title-text: #DBEAFE;
+            --result-value-text: #ffffff;
+            --solution-step-bg: #2d3748;
+            --tab-active-bg: #1F2937;
+            --tab-inactive-bg: #111827;
+            --tab-active-text: #A5B4FC;
+            --tab-inactive-text: #9CA3AF;
+            --btn-mode-active-bg: #4F46E5;
+            --btn-mode-active-text: #ffffff;
+            --btn-mode-inactive-bg: transparent;
+            --btn-mode-inactive-text: #9CA3AF;
+            --header-controls-bg: rgba(55, 65, 81, 0.5);
+            --group-header-bg: #312e81;
+            --group-component-bg: #2d3748;
+        }
+        
+        html { scroll-behavior: smooth; }
+        body { 
+            font-family: 'Assistant', 'Inter', sans-serif; 
+            background-image: var(--bg-body); 
+            font-size: 1.1rem; 
+            color: var(--text-main);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .main-content-box { 
+            background-color: var(--bg-main); 
+            color: var(--text-main); 
+            border-radius: 0.75rem; 
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            transition: background-color 0.3s ease, color 0.3s ease; 
+        }
+        .section-title { font-size: 1.5rem; font-weight: 600; color: var(--text-main); border-bottom: 2px solid var(--section-border); padding-bottom: 0.5rem; margin-bottom: 1.25rem; transition: color 0.3s ease, border-color 0.3s ease; }
+        .input-label { display: flex; align-items: center; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.4rem; font-size: 1.05rem; }
+        .learn-mode-active .input-label[data-learn-key],
+        .learn-mode-active #failureMechanismCanvas { cursor: help; }
+        .learn-mode-active .input-label[data-learn-key]:hover { color: var(--tab-active-text); }
+        .input-field { width: 100%; padding: 0.7rem 0.9rem; border: 1px solid var(--border-color); background-color: var(--bg-main); color: var(--text-main); border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); transition: all 0.2s ease-in-out; font-size: 1.05rem; }
+        .input-field:focus { outline: 2px solid transparent; outline-offset: 2px; border-color: #6366F1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3); }
+        .btn { padding: 0.75rem 1.5rem; border-radius: 0.375rem; font-weight: 600; transition: all 0.15s ease-in-out; font-size: 1.05rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;}
+        .btn:disabled { background-color: #9ca3af; cursor: not-allowed; opacity: 0.6; }
+        .btn-primary { background-color: #4F46E5; color: white; }
+        .btn-primary:hover:not(:disabled) { background-color: #4338CA; transform: translateY(-1px); }
+        .btn-secondary { background-color: #6B7280; color: white; }
+        .btn-secondary:hover:not(:disabled) { background-color: #4B5563; }
+        .btn-success { background-color: var(--btn-success-bg); color: white; }
+        .btn-success:hover:not(:disabled) { background-color: #059669; }
+        .btn-danger { background-color: var(--btn-danger-bg); color: white; }
+        .btn-danger:hover:not(:disabled) { background-color: #DC2626; }
+        
+        .result-box { background-color: var(--result-bg); border: 1px solid var(--result-border); padding: 1.25rem; border-radius: 0.5rem; margin-top: 1rem; transition: background-color 0.3s ease, border-color 0.3s ease; }
+        .result-value { font-weight: 700; color: var(--result-value-text); font-size: 1.3rem; opacity: 0; transform: translateY(10px); transition: opacity 0.5s ease-out, transform 0.5s ease-out; }
+        .result-value.visible { opacity: 1; transform: translateY(0); }
+        .canvas-container { display: grid; grid-template-rows: auto auto; gap: 1rem; margin: 0 auto; }
+        canvas.interactive-canvas { border: 1px solid var(--border-color); border-radius: 0.375rem; width: 100%; height: auto; cursor: zoom-in; transition: border-color 0.3s ease; }
+        
+        .warning-box { background-color: var(--warning-bg); border: 1px solid var(--warning-border); color: var(--warning-text); padding: 1rem; border-radius: 0.5rem; margin-top: 1rem; }
+        .assumptions-box { background-color: #fefce8; border: 1px solid #fde047; color: #854d0e; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; } 
+        .dark .assumptions-box { background-color: var(--warning-bg); border-color: var(--warning-border); color: var(--warning-text); }
+        
+        /* Tab Styles */
+        .tab-button { padding: 0.75rem 1rem; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s ease; background-color: var(--tab-inactive-bg); color: var(--tab-inactive-text); font-size: 0.9rem; text-align: center;}
+        .tab-button.active { border-bottom-color: var(--section-border); background-color: var(--tab-active-bg); color: var(--tab-active-text); }
+        .tab-content { display: none; padding-top: 1.5rem; }
+        .tab-content.active { display: block; }
+
+        /* Solution Tab Styles */
+        .solution-step { background-color: var(--solution-step-bg); border: 1px solid var(--border-color); padding: 1.25rem; border-radius: 0.5rem; margin-bottom: 1.5rem; }
+        .solution-step-title { font-size: 1.4rem; font-weight: 600; color: var(--text-main); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); }
+        
+        /* Cost Estimation & Final Account Styles */
+        .cost-section { background-color: var(--solution-step-bg); border: 1px solid var(--border-color); padding: 1.25rem; border-radius: 0.5rem; margin-bottom: 1.5rem; }
+        .main-table { width: 100%; margin-top: 1rem; border-collapse: collapse; }
+        .main-table th, .main-table td { border: 1px solid var(--border-color); padding: 0.75rem; text-align: center; vertical-align: middle; }
+        .main-table th { background-color: #f3f4f6; font-weight: 600; }
+        .dark .main-table th { background-color: #374151; }
+        .main-table input, .main-table select { text-align: center; max-width: 100px; }
+        #final-account-table .category-badge { padding: 0.2rem 0.5rem; border-radius: 0.25rem; font-size: 0.8rem; font-weight: 500; color: white; }
+
+        /* Gantt Chart Styles */
+        #gantt-container { overflow-x: auto; padding: 1rem; background-color: var(--solution-step-bg); border: 1px solid var(--border-color); border-radius: 0.5rem; }
+        .gantt-grid { display: grid; grid-template-columns: 250px 1fr; gap: 0.5rem; }
+        .gantt-header, .gantt-row { display: contents; }
+        .gantt-task-name, .gantt-timeline-header { padding: 0.75rem; font-weight: 600; position: sticky; right: 0; background-color: var(--group-header-bg); }
+        .gantt-task-name { text-align: right; border-left: 1px solid var(--border-color); }
+        .gantt-timeline-header { overflow: hidden; }
+        .gantt-timeline { position: relative; border-bottom: 1px solid var(--border-color); min-height: 44px; }
+        .gantt-day-marker { position: absolute; height: 100%; border-left: 1px dotted var(--border-color); }
+        .gantt-task-bar { position: absolute; top: 50%; transform: translateY(-50%); height: 28px; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 0.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .gantt-task-bar[data-category="חומרים"] { background-color: #3b82f6; }
+        .gantt-task-bar[data-category="עבודה"] { background-color: #10b981; }
+        .gantt-task-bar[data-category="ציוד"] { background-color: #f97316; }
+        .gantt-task-bar[data-category="כללי"] { background-color: #8b5cf6; }
+        .gantt-task-bar[data-category="יסוד-ביסוס"] { background-color: #6366f1; }
+
+        /* Modal Styles */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0s 0.3s; }
+        .modal.visible { opacity: 1; visibility: visible; transition: opacity 0.3s; }
+        .modal-content { background: var(--bg-main); padding: 2rem; border-radius: 0.5rem; max-width: 90vw; max-width: 600px; text-align: right; max-height: 90vh; overflow-y: auto; position: relative;}
+        .modal-close-btn { position: absolute; top: 0.5rem; left: 0.5rem; right: auto; background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-main); }
+        .header-controls { position: absolute; top: 0; left: 0; padding: 0.75rem; display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; z-index: 10; }
+        .header-controls > div { display: flex; align-items: center; gap: 0.75rem; }
+        .control-btn { background: var(--header-controls-bg); backdrop-filter: blur(4px); border: 1px solid var(--border-color); border-radius: 9999px; padding: 0.5rem; cursor: pointer; transition: all 0.3s ease; color: var(--text-main); }
+        .control-btn:hover { transform: scale(1.1); }
+        .control-btn svg { width: 1.5rem; height: 1.5rem; }
+        .unit-toggle { display: flex; align-items: center; background-color: var(--header-controls-bg); border: 1px solid var(--border-color); border-radius: 9999px; padding: 0.25rem; cursor: pointer; transition: all 0.3s ease; }
+        .unit-toggle:hover { box-shadow: 0 0 10px rgba(79, 70, 229, 0.4); }
+        .unit-toggle span { padding: 0.25rem 0.75rem; font-size: 0.8rem; font-weight: 600; border-radius: 9999px; transition: all 0.3s ease; }
+        .unit-toggle.kpa-active .kpa-unit { background-color: #3b82f6; color: white; }
+        .unit-toggle.ton-active .ton-unit { background-color: #ef4444; color: white; }
+        .learn-mode-toggle { display: flex; align-items: center; gap: 0.5rem; background-color: var(--header-controls-bg); border: 1px solid var(--border-color); border-radius: 9999px; padding: 0.3rem; }
+        #learn-mode-checkbox { appearance: none; width: 3.5rem; height: 1.75rem; background-color: var(--border-color); border-radius: 9999px; position: relative; cursor: pointer; transition: background-color 0.3s ease; }
+        #learn-mode-checkbox::before { content: ''; position: absolute; width: 1.25rem; height: 1.25rem; border-radius: 50%; background-color: white; top: 0.25rem; left: 0.25rem; transition: transform 0.3s ease; }
+        #learn-mode-checkbox:checked { background-color: #4f46e5; }
+        #learn-mode-checkbox:checked::before { transform: translateX(1.75rem); }
+        .formula-box { background-color: #eef2ff; border-right: 4px solid #4f46e5; margin: 1rem 0; padding: 1rem; direction: ltr; text-align: left; overflow-x: auto;}
+        .dark .formula-box { background-color: #312e81; border-right-color: #a5b4fc; }
+        .formula { font-family: 'Times New Roman', Times, serif; font-style: italic; color: #1e3a8a; font-size: 1.2rem; display: block; white-space: pre-wrap; word-wrap: break-word; }
+        .dark .formula { color: #e0e7ff;}
+        .formula-table { width: 100%; text-align: center; margin-top: 1rem; border-collapse: collapse; }
+        .formula-table th, .formula-table td { border: 1px solid var(--border-color); padding: 0.5rem; }
+        .formula-table th { background-color: var(--group-header-bg); }
+        .summary-table { width: 100%; max-width: 500px; margin-top: 1.5rem; margin-right: auto; }
+        .summary-table td { padding: 0.6rem 1rem; }
+        .summary-table .summary-label { font-weight: 500; color: var(--text-secondary); }
+        .summary-table .summary-value { font-weight: 600; color: var(--text-main); text-align: left; }
+        .summary-table .summary-total { font-weight: 700; font-size: 1.2rem; border-top: 2px solid var(--section-border); padding-top: 0.75rem; }
+        #final-account-table .group-header-row { cursor: pointer; background-color: var(--group-header-bg); transition: background-color 0.2s ease-in-out; }
+        #final-account-table .group-header-row:hover { background-color: #dbeafe; }
+        .dark #final-account-table .group-header-row:hover { background-color: #312e81; }
+        #final-account-table .group-header-row .arrow-icon { transition: transform 0.3s ease; }
+        #final-account-table .group-header-row.open .arrow-icon { transform: rotate(90deg); }
+        #final-account-table .component-row { background-color: var(--group-component-bg); display: none; }
+        #final-account-table .component-row.open { display: table-row; }
+        #final-account-table .component-row td { border-color: rgba(209, 213, 219, 0.5); font-size: 0.95em; padding-top: 0.5rem; padding-bottom: 0.5rem; }
+        .dark #final-account-table .component-row td { border-color: rgba(75, 85, 99, 0.5); }
+        #final-account-table .component-name { text-align: right; padding-right: 3rem !important; position: relative;}
+        #final-account-table .component-name::before { content: '↳'; position: absolute; right: 1.5rem; color: var(--text-secondary); }
+        .qty-controls { display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+        .qty-btn { background-color: #6366f1; color: white; border-radius: 9999px; width: 1.75rem; height: 1.75rem; font-weight: bold; border: none; cursor: pointer; transition: background-color 0.2s; }
+        .qty-btn:hover:not(:disabled) { background-color: #4f46e5; }
+        .qty-btn.delete-btn { background-color: #ef4444; }
+        .qty-btn.delete-btn:hover:not(:disabled) { background-color: #b91c1c; }
+        .mode-switcher-btn { padding: 0.5rem 1rem; border-radius: 0.375rem; font-weight: 500; transition: all 0.2s ease-in-out; border: 1px solid transparent; }
+        .mode-switcher-btn.active { background-color: var(--btn-mode-active-bg); color: var(--btn-mode-active-text); box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06); border-color: var(--border-color); }
+        .mode-switcher-btn:not(.active) { background-color: var(--btn-mode-inactive-bg); color: var(--btn-mode-inactive-text); }
+        
+        /* Custom modal button styling */
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="main-content-box max-w-7xl mx-auto p-6 md:p-8">
+        <header class="mb-6 relative">
+             <div class="header-controls">
+                <div>
+                    <div class="learn-mode-toggle" aria-label="Toggle Learn Mode">
+                        <span class="font-semibold text-sm">מצב לימוד</span>
+                        <input type="checkbox" id="learn-mode-checkbox">
+                    </div>
+                     <button id="formulas-btn" class="control-btn" aria-label="Show formulas">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
+                        </svg>
+                    </button>
+                </div>
+                <div>
+                     <button id="theme-toggle-btn" class="control-btn" aria-label="Toggle theme">
+                        <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.95-4.223-1.591 1.591M5.25 12H3m4.223-4.95L6.364 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
+                        </svg>
+                        <svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 hidden">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+                        </svg>
+                    </button>
+                    <div id="unit-toggle" class="unit-toggle" aria-label="Toggle units">
+                        <span class="ton-unit">t/m²</span>
+                        <span class="kpa-unit">kPa</span>
+                    </div>
+                </div>
+            </div>
+            <img src="https://i.postimg.cc/j28gPPbw/Whats-App-2025-06-12-00-52-49-f414dbe7.jpg" alt="לוגו" class="absolute top-0 right-0 h-16 w-16 md:h-20 md:w-20 rounded-full shadow-md">
+            <div class="text-center">
+                <h1 class="text-3xl md:text-4xl font-bold text-indigo-700 dark:text-indigo-400">מחשבון הנדסי וחשבון סופי V25.7</h1>
+                <p class="text-gray-500 dark:text-gray-400 mt-2 text-base">מובא כחומר עזר עבור הרצאה מס' 4 במאמצים מותרים בקורס קרקע וביסוס - שלומי שאול</p>
+            </div>
+        </header>
+
+        <div class="border-b border-gray-300 dark:border-gray-600 mb-4">
+            <nav class="flex flex-wrap -mb-px">
+                <button class="tab-button active" data-tab="calculation-tab">חישוב הנדסי</button>
+                <button class="tab-button" data-tab="solution-tab">מהלך פתרון</button>
+                <button class="tab-button" data-tab="cost-estimation-tab">אומדן עלות יסוד</button>
+                <button class="tab-button" data-tab="quantities-summary-tab">סיכום כמויות</button>
+                <button class="tab-button" data-tab="final-account-tab">חשבון סופי</button>
+                <button class="tab-button" data-tab="gantt-chart-tab">לוח זמנים (גאנט)</button>
+            </nav>
+        </div>
+        
+        <main>
+            <!-- Calculation Tab -->
+            <div id="calculation-tab" class="tab-content active">
+                <div class="flex items-center justify-center bg-gray-100 dark:bg-gray-800 p-1 rounded-lg mb-6 max-w-md mx-auto">
+                    <button id="calc-mode-btn" class="mode-switcher-btn w-1/2 active">מצב חישוב</button>
+                    <button id="design-mode-btn" class="mode-switcher-btn w-1/2">מצב תכנון</button>
+                </div>
+                <details class="assumptions-box">
+                    <summary class="font-semibold cursor-pointer">הנחות יסוד ומגבלות לשימוש בנוסחת טרצגי (לחץ להצגה)</summary>
+                    <ul class="list-disc pr-6 mt-2 space-y-1 text-sm">
+                        <li>היסוד הוא "יסוד רדוד", כלומר עומק הביסוס קטן או שווה לרוחב היסוד (D<sub>f</sub> &le; B).</li>
+                        <li>בסיס היסוד מחוספס.</li>
+                        <li>תאורטית, מנגנון הכשל הוא כשל גזירה כללי.</li>
+                        <li>צורת היסוד המוגדרת היא יסוד נמשך (אינסופי), ריבועי או עגול.</li>
+                        <li>פני הקרקע אופקיים ותחתית היסוד אופקית.</li>
+                        <li>העומס על היסוד הוא אנכי ופועל במרכז היסוד (צנטרי).</li>
+                        <li>אין התחשבות בחוזק הגזירה של הקרקע מעל מפלס הביסוס.</li>
+                    </ul>
+                </details>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 md:gap-x-10 gap-y-8">
+                    <div class="space-y-8">
+                        <div id="design-inputs" class="hidden">
+                            <h2 class="section-title">עומס תכן נדרש</h2>
+                            <div>
+                                <label for="required_load" class="input-label" data-learn-key="required_load">עומס נדרש מהאלמנט (P<sub>net,req</sub>) <span class="unit-text-load ml-1">[kN או t]</span></label>
+                                <input type="number" id="required_load" value="500" class="input-field">
+                                <p class="text-xs text-gray-500 mt-1">הזן עומס נקי נדרש על העמוד (ביח' kN או t) או עומס נדרש על הקיר (ביח' kN/m או t/m).</p>
+                            </div>
+                        </div>
+                        <div>
+                            <h2 class="section-title">נתוני קרקע</h2>
+                            <div class="bg-indigo-50 dark:bg-indigo-900/50 p-4 rounded-lg mb-5 border border-indigo-200 dark:border-indigo-700">
+                                <label for="soil-library-select" class="input-label">טען תכונות ממאגר נתונים</label>
+                                <div class="flex items-center gap-2">
+                                    <select id="soil-library-select" class="input-field flex-grow">
+                                        <option value="custom">-- בחר סוג קרקע --</option>
+                                        <option value="dense_sand">חול צפוף, יבש</option>
+                                        <option value="loose_sand">חול תחוח, יבש</option>
+                                        <option value="hard_clay">חרסית קשה</option>
+                                        <option value="soft_clay">חרסית רכה</option>
+                                        <option value="sandy_gravel">חצץ חולי, צפוף</option>
+                                    </select>
+                                    <button id="load-soil-btn" class="btn btn-secondary">טען</button>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2">בחירה מרשימה זו תאכלס את השדות למטה בערכים אופייניים. הערכים מבוססים על ספרות מקצועית וניתנים לעריכה.</p>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
+                                <div>
+                                    <label for="c_prime" class="input-label" data-learn-key="c_prime">
+                                        <span>קוהזיה אפקטיבית (c&prime;) <span id="c-prime-unit-label">[kPa]</span></span>
+                                    </label>
+                                    <input type="number" id="c_prime" value="10" class="input-field">
+                                </div>
+                                <div>
+                                    <label for="phi_deg" class="input-label" data-learn-key="phi_deg">
+                                        <span>זווית חיכוך פנימי (&phi;&prime;) [מעלות]</span>
+                                    </label>
+                                    <input type="number" id="phi_deg" value="25" step="0.1" class="input-field">
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label for="gamma_val" class="input-label" data-learn-key="gamma_val">
+                                        <span>משקל מרחבי טבעי/כולל (&gamma;) <span id="gamma-unit-label">[kN/m&sup3;]</span></span>
+                                    </label>
+                                    <input type="number" id="gamma_val" value="18" class="input-field">
+                                </div>
+                                <div class="sm:col-span-2 mt-2">
+                                    <label class="flex items-center space-x-2 space-x-reverse cursor-pointer">
+                                        <input type="checkbox" id="gwt_checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                        <span>התחשב בהשפעת מי תהום</span>
+                                    </label>
+                                </div>
+                                <div id="gwt_inputs" class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5 hidden">
+                                    <div>
+                                        <label for="dw_val" class="input-label" data-learn-key="dw_val">
+                                            <span>עומק מפלס מי תהום (D<sub>w</sub>) [m]</span>
+                                        </label>
+                                        <input type="number" id="dw_val" value="3.0" class="input-field">
+                                    </div>
+                                    <div>
+                                        <label for="gamma_sat_val" class="input-label" data-learn-key="gamma_sat_val">
+                                            <span>משקל מרחבי רווי (&gamma;<sub>sat</sub>) <span id="gamma-sat-unit-label">[kN/m&sup3;]</span></span>
+                                        </label>
+                                        <input type="number" id="gamma_sat_val" value="20" class="input-field">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <h2 class="section-title">גיאומטריית היסוד והאלמנט</h2>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
+                                <div>
+                                    <label for="Df_val" class="input-label" data-learn-key="Df_val"><span>עומק ביסוס (D<sub>f</sub>) [m]</span></label>
+                                    <input type="number" id="Df_val" value="1.0" step="0.1" class="input-field">
+                                </div>
+                                <div id="b_input_container">
+                                    <label for="B_val" class="input-label" data-learn-key="B_val"><span>רוחב יסוד (B) [m]</span></label>
+                                    <input type="number" id="B_val" value="2.0" step="0.1" class="input-field">
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label for="foundation_shape" class="input-label" data-learn-key="foundation_shape"><span>צורת היסוד</span></label>
+                                    <select id="foundation_shape" class="input-field">
+                                        <option value="strip">יסוד נמשך (Strip)</option>
+                                        <option value="square" selected>יסוד ריבועי (Square)</option>
+                                        <option value="circular">יסוד עגול (Circular)</option>
+                                    </select>
+                                </div>
+                                <div id="structure_inputs" class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
+                                    <div>
+                                        <label for="h_f" class="input-label" data-learn-key="h_f"><span>עובי יסוד (h<sub>f</sub>) [cm]</span></label>
+                                        <input type="number" id="h_f" value="40" class="input-field">
+                                    </div>
+                                    <div id="col_b_div">
+                                        <label for="col_b" id="col_b_label" class="input-label" data-learn-key="col_b"><span>רוחב עמוד (b<sub>col</sub>) [cm]</span></label>
+                                        <input type="number" id="col_b" value="40" class="input-field">
+                                    </div>
+                                    <div id="col_l_div">
+                                        <label for="col_l" class="input-label" data-learn-key="col_l"><span>אורך חתך עמוד (l<sub>col</sub>) [cm]</span></label>
+                                        <input type="number" id="col_l" value="40" class="input-field">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <h2 class="section-title">מקדם בטיחות</h2>
+                            <div>
+                                <label for="FS_val" class="input-label" data-learn-key="FS_val"><span>מקדם בטיחות (FS)</span></label>
+                                <input type="number" id="FS_val" value="3" step="0.1" class="input-field">
+                            </div>
+                        </div>
+                        <button id="calculateButton" class="w-full btn btn-primary mt-6">חשב</button>
+                    </div>
+                    <div class="space-y-8">
+                        <div class="canvas-container">
+                            <div>
+                                <h3 class="section-title text-center !border-b-0">אנימציה - חתך יסוד</h3>
+                                <canvas id="foundationSectionCanvas" width="400" height="250" class="interactive-canvas"></canvas>
+                            </div>
+                            <div>
+                                <h3 class="section-title text-center !border-b-0">אנימציה - מבט על</h3>
+                                <canvas id="foundationPlanCanvas" width="400" height="150" class="interactive-canvas"></canvas>
+                            </div>
+                        </div>
+                        <div id="failureMechanismContainer">
+                            <h3 class="section-title text-center !border-b-0" data-learn-key="failure_mechanism">שרטוט מנגנון הכשל</h3>
+                            <canvas id="failureMechanismCanvas" width="400" height="250" class="interactive-canvas !cursor-default"></canvas>
+                            <p class="text-xs text-center text-gray-400 mt-2">הפעל 'מצב לימוד' כדי ללחוץ על אזורים בשרטוט ולקבל הסבר.</p>
+                        </div>
+                        <div id="assumptionWarningBox" class="warning-box hidden"></div>
+                        <div id="resultsBox" class="result-box hidden">
+                            <h2 class="section-title !mb-5">תוצאות החישוב</h2>
+                            <div id="resultsContent" class="space-y-4">
+                                <div id="designResultText" class="hidden p-3 bg-green-100 dark:bg-green-900 border-r-4 border-green-500 rounded mb-4 space-y-2">
+                                    <p class="font-semibold">תוצאת התכנון:</p>
+                                    <p id="design_b_output" class="text-lg font-bold"></p>
+                                    <p id="design_cost_output" class="text-md font-medium"></p>
+                                </div>
+                                <div>
+                                    <p class="result-title flex items-center">תסבולת מותרת לקרקע (q<sub>all</sub>):</p>
+                                    <p id="qall_output" class="result-value">-</p>
+                                </div>
+                                <div id="netLoadResult">
+                                    <p class="result-title flex items-center">עומס תכן נקי מותר על האלמנט (P<sub>net,all</sub>):</p>
+                                    <p id="p_net_output" class="result-value">-</p>
+                                </div>
+                                <div id="stripLoadResult" class="hidden">
+                                    <p class="result-title">עומס תכן מותר על הקיר (Q<sub>all</sub>):</p>
+                                    <p id="strip_qall_output" class="result-value">-</p>
+                                </div>
+                                <hr class="my-2 border-t border-blue-200 dark:border-blue-800">
+                                <div>
+                                    <p class="text-sm text-gray-700 dark:text-gray-300 flex items-center">תסבולת הרס אולטימטיבית (q<sub>u</sub>):</p>
+                                    <p id="qu_output" class="text-sm text-gray-600 dark:text-gray-400">-</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-700 dark:text-gray-300">מקדמי תסבולת שחושבו:</p>
+                                    <p id="factors_output" class="text-sm text-gray-600 dark:text-gray-400">-</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="graph-container" class="mt-12 hidden">
+                    <h2 class="section-title">גרף תסבולת מותרת (q<sub>all</sub>) כפונקציה של רוחב היסוד (B)</h2>
+                    <div class="relative h-96">
+                        <canvas id="bearingCapacityChart" class="interactive-canvas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Solution Tab -->
+            <div id="solution-tab" class="tab-content">
+                <div id="solution-steps-container">
+                    <div class="text-center p-8 text-gray-500">
+                        <p>בצע חישוב בלשונית "חישוב הנדסי" כדי להציג את מהלך הפתרון המפורט.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cost Estimation Tab -->
+            <div id="cost-estimation-tab" class="tab-content">
+                <div class="cost-section">
+                    <h3 class="section-title !text-xl !border-indigo-400">הגדרות סעיף</h3>
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="foundation-name" class="input-label">שם/סוג יסוד</label>
+                            <input type="text" id="foundation-name" class="input-field" value="יסוד בודד">
+                        </div>
+                        <div>
+                            <label for="foundation-index" class="input-label">אינדקס/מספר</label>
+                            <input type="text" id="foundation-index" class="input-field" value="F-101">
+                        </div>
+                        <div>
+                            <label for="foundation-duration" class="input-label">משך ביצוע (ימים)</label>
+                            <input type="number" id="foundation-duration" class="input-field" value="3">
+                        </div>
+                     </div>
+                </div>
+
+                <div class="cost-section">
+                    <h3 class="section-title !text-xl !border-indigo-400">מידות היסוד לחישוב כמויות</h3>
+                    <div id="foundation-dimensions-display" class="p-3 bg-indigo-100 dark:bg-indigo-900 rounded-md text-center font-semibold mb-4"></div>
+                    <div id="strip-length-input-container" class="hidden">
+                        <label for="strip-foundation-length" class="input-label">אורך יסוד נמשך (L) [m]</label>
+                        <input type="number" id="strip-foundation-length" class="input-field" value="10">
+                    </div>
+                </div>
+
+                <div class="cost-section">
+                    <h3 class="section-title !text-xl !border-indigo-400">כתב כמויות ועלויות עבור האלמנט</h3>
+                    <table class="main-table">
+                        <thead> <tr> <th>סעיף</th> <th>כמות</th> <th>יחידה</th> <th>מחיר יחידה (₪)</th> <th>סה"כ (₪)</th> </tr> </thead>
+                        <tbody>
+                            <tr> <td>חפירה ועבודות עפר</td> <td id="boq-excavation-qty">-</td> <td>מ"ק</td> <td><input type="number" id="boq-excavation-price" class="input-field" value="80"></td> <td id="boq-excavation-total">-</td> </tr>
+                            <tr> <td>בטון</td> <td id="boq-concrete-qty">-</td> <td>מ"ק</td> <td><input type="number" id="boq-concrete-price" class="input-field" value="550"></td> <td id="boq-concrete-total">-</td> </tr>
+                            <tr> <td>טפסנות</td> <td id="boq-formwork-qty">-</td> <td>מ"ר</td> <td><input type="number" id="boq-formwork-price" class="input-field" value="120"></td> <td id="boq-formwork-total">-</td> </tr>
+                            <tr> <td>פלדה (ברזל)</td> <td id="boq-steel-qty">-</td> <td>טון</td> <td><input type="number" id="boq-steel-price" class="input-field" value="6500"></td> <td id="boq-steel-total">-</td> </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                 <div class="cost-section">
+                    <h3 class="section-title !text-xl !border-indigo-400">אפשרויות חישוב פלדה</h3>
+                     <div class="flex items-center space-x-4 space-x-reverse mb-4">
+                        <label class="flex items-center"> <input type="radio" name="steel-calc-method" value="ratio" class="form-radio" checked> <span class="mr-2">יחס זיון</span> </label>
+                        <label class="flex items-center"> <input type="radio" name="steel-calc-method" value="detailed" class="form-radio"> <span class="mr-2">חישוב מפורט</span> </label>
+                        <label class="flex items-center"> <input type="radio" name="steel-calc-method" value="total" class="form-radio"> <span class="mr-2">משקל כולל</span> </label>
+                     </div>
+                     <div id="steel-ratio-inputs">
+                         <label for="steel-ratio" class="input-label">יחס זיון (ק"ג פלדה למ"ק בטון)</label>
+                         <input type="number" id="steel-ratio" class="input-field" value="120">
+                     </div>
+                     <div id="steel-detailed-inputs" class="hidden grid grid-cols-2 md:grid-cols-4 gap-4">
+                         <div> <label for="steel-dia-x" class="input-label">קוטר X (מ"מ)</label> <input type="number" id="steel-dia-x" class="input-field" value="12"> </div>
+                         <div> <label for="steel-spacing-x" class="input-label">פסיעה X (ס"מ)</label> <input type="number" id="steel-spacing-x" class="input-field" value="20"> </div>
+                         <div> <label for="steel-dia-y" class="input-label">קוטר Y (מ"מ)</label> <input type="number" id="steel-dia-y" class="input-field" value="12"> </div>
+                         <div> <label for="steel-spacing-y" class="input-label">פסיעה Y (ס"מ)</label> <input type="number" id="steel-spacing-y" class="input-field" value="20"> </div>
+                     </div>
+                      <div id="steel-total-inputs" class="hidden">
+                         <label for="steel-total-weight" class="input-label">משקל פלדה כולל ביסוד (טון)</label>
+                         <input type="number" id="steel-total-weight" class="input-field" value="0.5">
+                     </div>
+                </div>
+                <button id="addToAccountButton" class="w-full btn btn-success mt-6">הוסף יסוד לחשבון הסופי</button>
+            </div>
+
+            <!-- Quantities Summary Tab -->
+            <div id="quantities-summary-tab" class="tab-content">
+                <div class="cost-section">
+                    <h3 class="section-title !text-xl !border-indigo-400">סיכום חומרים עיקריים</h3>
+                    <table id="quantities-summary-materials" class="main-table">
+                        <thead> <tr> <th>חומר</th> <th>כמות מצטברת</th> <th>יחידה</th> </tr> </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="cost-section">
+                    <h3 class="section-title !text-xl !border-indigo-400">סיכום סעיפים אחרים (שירותים/כללי)</h3>
+                    <table id="quantities-summary-others" class="main-table">
+                         <thead> <tr> <th>תיאור הסעיף</th> <th>כמות</th> <th>יחידה</th> </tr> </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Final Account Tab -->
+            <div id="final-account-tab" class="tab-content">
+                <div class="cost-section">
+                    <h3 class="section-title !text-xl !border-indigo-400">הוספת סעיף חופשי לחשבון</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                        <div class="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div><label for="custom-item-desc" class="input-label">תיאור הסעיף</label><input type="text" id="custom-item-desc" class="input-field" placeholder="לדוגמה: מדידות"></div>
+                            <div>
+                                <label for="custom-item-category" class="input-label">קטגוריה</label>
+                                <select id="custom-item-category" class="input-field">
+                                    <option value="חומרים">חומרים</option>
+                                    <option value="עבודה">עבודה</option>
+                                    <option value="ציוד">ציוד</option>
+                                    <option value="כללי" selected>כללי</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div> <label for="custom-item-qty" class="input-label">כמות</label> <input type="number" id="custom-item-qty" class="input-field" value="1"> </div>
+                        <div><label for="custom-item-unit" class="input-label">יחידה</label><input type="text" id="custom-item-unit" class="input-field" value="קומפלט"></div>
+                        <div><label for="custom-item-price" class="input-label">מחיר יח' (₪)</label><input type="number" id="custom-item-price" class="input-field" placeholder="1500"></div>
+                        <div class="md:col-span-3">
+                            <label for="custom-item-duration" class="input-label">משך ביצוע (ימים)</label>
+                            <input type="number" id="custom-item-duration" class="input-field" value="1">
+                        </div>
+                    </div>
+                    <button id="addCustomItemButton" class="btn btn-primary mt-4">הוסף סעיף</button>
+                </div>
+                
+                <div class="cost-section">
+                    <h3 class="section-title !text-xl !border-indigo-400">ריכוז חשבון סופי</h3>
+                     <table id="final-account-table" class="main-table">
+                        <thead><tr> <th class="text-right w-2/5">תיאור הסעיף</th> <th>כמות</th> <th>יחידה</th> <th>מחיר יחידה (₪)</th> <th>סה"כ (₪)</th> <th>פעולות</th> </tr></thead>
+                        <tbody id="final-account-table-body"></tbody>
+                    </table>
+                    <div class="flex justify-end mt-4"> <button id="clearAccountButton" class="btn btn-danger">נקה את כל החשבון</button> </div>
+                </div>
+                
+                <div class="cost-section">
+                     <h3 class="section-title !text-xl !border-indigo-400">סיכום תקציבי כולל</h3>
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <div class="grid grid-cols-2 gap-x-4 items-end">
+                                <div><label for="unforeseen-percent" class="input-label">בצ"מ (%)</label><input type="number" id="unforeseen-percent" class="input-field" value="15"></div>
+                                <div><label for="overhead-percent" class="input-label">תקורה כללית (%)</label><input type="number" id="overhead-percent" class="input-field" value="12"></div>
+                                <div><label for="retention-percent" class="input-label">עכבון (%)</label><input type="number" id="retention-percent" class="input-field" value="10"></div>
+                                <div><label for="vat-percent" class="input-label">מע"מ (%)</label><input type="number" id="vat-percent" class="input-field" value="17"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <table class="summary-table !mr-0 !ml-auto">
+                                <tbody>
+                                    <tr> <td class="summary-label">סה"כ עלות ישירה</td> <td id="summary-direct-cost" class="summary-value">0 ₪</td> </tr>
+                                    <tr> <td class="summary-label">סכום בצ"מ</td> <td id="summary-unforeseen-value" class="summary-value">0 ₪</td> </tr>
+                                    <tr> <td class="summary-label">סכום תקורה כללית</td> <td id="summary-overhead-value" class="summary-value">0 ₪</td> </tr>
+                                    <tr class="border-t border-gray-200 dark:border-gray-700"> <td class="summary-label pt-3">סה"כ (לפני מע"מ)</td> <td id="summary-subtotal" class="summary-value pt-3">0 ₪</td> </tr>
+                                    <tr> <td class="summary-label">סכום עכבון</td> <td id="summary-retention-value" class="summary-value text-red-600">0 ₪</td> </tr>
+                                    <tr> <td class="summary-label">סכום מע"מ</td> <td id="summary-vat-value" class="summary-value">0 ₪</td> </tr>
+                                    <tr class="summary-total"> <td class="summary-label">סה"כ לתשלום</td> <td id="summary-final-total" class="summary-value">0 ₪</td> </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                     </div>
+                </div>
+            </div>
+
+            <!-- Gantt Chart Tab -->
+            <div id="gantt-chart-tab" class="tab-content">
+                <div class="cost-section">
+                    <h3 class="section-title !text-xl !border-indigo-400">לוח זמנים לתכנון (גאנט)</h3>
+                    <p class="text-sm text-gray-500 -mt-4 mb-4">התרשים מציג את משך הפעילויות שהוגדרו בחשבון הסופי. כרגע הפעילויות מוצגות ברצף (Finish-to-Start). בעתיד ניתן יהיה להוסיף קשרים מורכבים יותר.</p>
+                    <div id="gantt-container">
+                        <div class="text-center p-8 text-gray-500">
+                            <p>הוסף סעיפים עם משך ביצוע לחשבון הסופי כדי להציג את לוח הזמנים.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+    
+    <!-- Modals -->
+    <div id="image-modal" class="modal">
+        <div class="modal-content relative">
+            <img id="modal-image" src="" alt="Enlarged View">
+            <button class="modal-close-btn absolute top-2 right-2">&times;</button>
+        </div>
+    </div>
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content">
+            <button id="confirm-modal-close" class="modal-close-btn">&times;</button>
+            <p id="confirm-modal-text" class="text-lg">האם אתה בטוח?</p>
+            <div class="modal-buttons">
+                <button id="confirm-modal-yes" class="btn btn-danger">כן</button>
+                <button id="confirm-modal-no" class="btn btn-primary">לא</button>
+            </div>
+        </div>
+    </div>
+    <div id="formula-sheet-modal" class="modal">
+        <div class="modal-content">
+            <button id="formula-modal-close" class="modal-close-btn">&times;</button>
+            <h2 class="text-xl font-bold mb-4">דף נוסחאות - טרצגי</h2>
+            <p><strong>משוואת תסבולת כללית:</strong></p>
+            <div class="formula-box" style="direction: ltr; text-align: left;">
+                <code class="formula">q<sub>ult</sub> = c'·N<sub>c</sub>·s<sub>c</sub> + q'·N<sub>q</sub> + 0.5·γ'·B·N<sub>γ</sub>·s<sub>γ</sub></code>
+            </div>
+            <h3 class="font-semibold mt-4 mb-2">מקדמי תסבולת (Terzaghi)</h3>
+            <table class="formula-table">
+                <thead> <tr><th>&phi;'</th><th>N<sub>c</sub></th><th>N<sub>q</sub></th><th>N<sub>&gamma;</sub></th></tr> </thead>
+                <tbody>
+                    <tr><td>0</td><td>5.7</td><td>1.0</td><td>0.0</td></tr>
+                    <tr><td>5</td><td>7.3</td><td>1.6</td><td>0.5</td></tr>
+                    <tr><td>10</td><td>9.6</td><td>2.7</td><td>1.2</td></tr>
+                    <tr><td>15</td><td>12.9</td><td>4.4</td><td>2.5</td></tr>
+                    <tr><td>20</td><td>17.7</td><td>7.4</td><td>5.0</td></tr>
+                    <tr><td>25</td><td>25.1</td><td>12.7</td><td>9.7</td></tr>
+                    <tr><td>30</td><td>37.2</td><td>22.5</td><td>19.7</td></tr>
+                    <tr><td>35</td><td>57.8</td><td>41.4</td><td>42.4</td></tr>
+                    <tr><td>40</td><td>95.7</td><td>81.3</td><td>100.4</td></tr>
+                </tbody>
+            </table>
+            <h3 class="font-semibold mt-4 mb-2">מקדמי צורה (Terzaghi)</h3>
+            <table class="formula-table">
+                <thead> <tr><th>צורת היסוד</th><th>s<sub>c</sub></th><th>s<sub>&gamma;</sub></th></tr> </thead>
+                <tbody>
+                    <tr><td>יסוד נמשך (Strip)</td><td>1.0</td><td>1.0</td></tr>
+                    <tr><td>יסוד ריבועי (Square)</td><td>1.3</td><td>0.8</td></tr>
+                    <tr><td>יסוד עגול (Circular)</td><td>1.3</td><td>0.6</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="learn-modal" class="modal">
+        <div class="modal-content">
+            <button id="learn-modal-close" class="modal-close-btn">&times;</button>
+            <h2 id="learn-modal-title" class="text-xl font-bold mb-3"></h2>
+            <div id="learn-modal-text" class="text-base"></div>
+        </div>
+    </div>
+    
+    <script type="module">
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM ELEMENT SELECTION ---
+            // This section remains largely the same, selecting all necessary elements from the DOM.
+            const themeToggleButton = document.getElementById('theme-toggle-btn');
+            const themeIconSun = document.getElementById('theme-icon-sun');
+            const themeIconMoon = document.getElementById('theme-icon-moon');
+            const unitToggleButton = document.getElementById('unit-toggle');
+            const learnModeCheckbox = document.getElementById('learn-mode-checkbox');
+            const mainBody = document.querySelector('body');
+            const tabs = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            const cPrimeInput = document.getElementById('c_prime'), 
+                  phiDegInput = document.getElementById('phi_deg'), 
+                  gammaValInput = document.getElementById('gamma_val'), 
+                  gwtCheckbox = document.getElementById('gwt_checkbox'), 
+                  gwtInputsDiv = document.getElementById('gwt_inputs'), 
+                  dwValInput = document.getElementById('dw_val'), 
+                  gammaSatValInput = document.getElementById('gamma_sat_val'), 
+                  DfValInput = document.getElementById('Df_val'), 
+                  BValInput = document.getElementById('B_val'), 
+                  foundationShapeSelect = document.getElementById('foundation_shape'), 
+                  hfInput = document.getElementById('h_f'), 
+                  colBInput = document.getElementById('col_b'), 
+                  colLInput = document.getElementById('col_l'), 
+                  FSInput = document.getElementById('FS_val'), 
+                  calculateButton = document.getElementById('calculateButton'), 
+                  assumptionWarningBox = document.getElementById('assumptionWarningBox'), 
+                  resultsBox = document.getElementById('resultsBox'), 
+                  quOutput = document.getElementById('qu_output'), 
+                  qallOutput = document.getElementById('qall_output'), 
+                  pNetOutput = document.getElementById('p_net_output'), 
+                  stripQallOutput = document.getElementById('strip_qall_output'), 
+                  factorsOutput = document.getElementById('factors_output'), 
+                  netLoadResultDiv = document.getElementById('netLoadResult'), 
+                  stripLoadResultDiv = document.getElementById('stripLoadResult'), 
+                  sectionCanvas = document.getElementById('foundationSectionCanvas'), 
+                  planCanvas = document.getElementById('foundationPlanCanvas'),
+                  failureMechanismCanvas = document.getElementById('failureMechanismCanvas'),
+                  colLDiv = document.getElementById('col_l_div'),
+                  colBLabel = document.getElementById('col_b_label');
+            const solutionContainer = document.getElementById('solution-steps-container');
+            const foundationNameInput = document.getElementById('foundation-name'), foundationIndexInput = document.getElementById('foundation-index'), foundationDurationInput = document.getElementById('foundation-duration');
+            const boqExcavationQty = document.getElementById('boq-excavation-qty'), boqConcreteQty = document.getElementById('boq-concrete-qty'), boqFormworkQty = document.getElementById('boq-formwork-qty'), boqSteelQty = document.getElementById('boq-steel-qty'), boqExcavationPrice = document.getElementById('boq-excavation-price'), boqConcretePrice = document.getElementById('boq-concrete-price'), boqFormworkPrice = document.getElementById('boq-formwork-price'), boqSteelPrice = document.getElementById('boq-steel-price'), boqExcavationTotal = document.getElementById('boq-excavation-total'), boqConcreteTotal = document.getElementById('boq-concrete-total'), boqFormworkTotal = document.getElementById('boq-formwork-total'), boqSteelTotal = document.getElementById('boq-steel-total'), steelCalcMethodRadios = document.querySelectorAll('input[name="steel-calc-method"]'), steelRatioInputs = document.getElementById('steel-ratio-inputs'), steelDetailedInputs = document.getElementById('steel-detailed-inputs'), steelTotalInputs = document.getElementById('steel-total-inputs'), steelRatioInput = document.getElementById('steel-ratio'), steelTotalWeightInput = document.getElementById('steel-total-weight'), addToAccountButton = document.getElementById('addToAccountButton');
+            const stripLengthInput = document.getElementById('strip-foundation-length');
+            const quantitiesMaterialsBody = document.querySelector('#quantities-summary-materials tbody');
+            const quantitiesOthersBody = document.querySelector('#quantities-summary-others tbody');
+            const finalAccountTableBody = document.getElementById('final-account-table-body'), addCustomItemButton = document.getElementById('addCustomItemButton'), clearAccountButton = document.getElementById('clearAccountButton'), customItemDesc = document.getElementById('custom-item-desc'), customItemQty = document.getElementById('custom-item-qty'), customItemUnit = document.getElementById('custom-item-unit'), customItemPrice = document.getElementById('custom-item-price'), customItemCategorySelect = document.getElementById('custom-item-category'), customItemDurationInput = document.getElementById('custom-item-duration');
+            const unforeseenPercentInput = document.getElementById('unforeseen-percent'), overheadPercentInput = document.getElementById('overhead-percent'), retentionPercentInput = document.getElementById('retention-percent'), vatPercentInput = document.getElementById('vat-percent');
+            const summaryDirectCost = document.getElementById('summary-direct-cost'), summaryUnforeseenValue = document.getElementById('summary-unforeseen-value'), summaryOverheadValue = document.getElementById('summary-overhead-value'), summarySubtotal = document.getElementById('summary-subtotal'), summaryRetentionValue = document.getElementById('summary-retention-value'), summaryVatValue = document.getElementById('summary-vat-value'), summaryFinalTotal = document.getElementById('summary-final-total');
+            const calcModeBtn = document.getElementById('calc-mode-btn');
+            const designModeBtn = document.getElementById('design-mode-btn');
+            const designInputsDiv = document.getElementById('design-inputs');
+            const requiredLoadInput = document.getElementById('required_load');
+            const bValInputContainer = document.getElementById('b_input_container');
+            const designResultTextDiv = document.getElementById('designResultText');
+            const designBOutput = document.getElementById('design_b_output');
+            const designCostOutput = document.getElementById('design_cost_output');
+            const graphContainer = document.getElementById('graph-container');
+            const bearingCapacityChartCanvas = document.getElementById('bearingCapacityChart');
+            const imageModal = document.getElementById('image-modal');
+            const modalImage = document.getElementById('modal-image');
+            const imageModalCloseBtn = imageModal.querySelector('.modal-close-btn');
+            const confirmModal = document.getElementById('confirm-modal');
+            const confirmModalText = document.getElementById('confirm-modal-text');
+            const confirmModalYes = document.getElementById('confirm-modal-yes');
+            const confirmModalNo = document.getElementById('confirm-modal-no');
+            const confirmModalClose = document.getElementById('confirm-modal-close');
+            const formulaSheetModal = document.getElementById('formula-sheet-modal');
+            const formulaSheetBtn = document.getElementById('formulas-btn');
+            const formulaModalCloseBtn = document.getElementById('formula-modal-close');
+            const learnModal = document.getElementById('learn-modal');
+            const learnModalClose = document.getElementById('learn-modal-close');
+            const learnModalTitle = document.getElementById('learn-modal-title');
+            const learnModalText = document.getElementById('learn-modal-text');
+            const soilLibrarySelect = document.getElementById('soil-library-select');
+            const loadSoilBtn = document.getElementById('load-soil-btn');
+            const ganttContainer = document.getElementById('gantt-container');
+
+            // --- STATE MANAGEMENT ---
+            let lastCalculationResult = {};
+            let currentBoq = {};
+            let finalAccountGroups = []; 
+            let currentMode = 'analysis'; // <-- FIXED: Changed from 'analysis' to a clear state name
+            let bearingChart; 
+            let currentUnitSystem = 'kpa'; 
+            const KPA_PER_TON = 9.81; 
+            let failureAnimationRequest;
+            let failureZonePolygons = {};
+            
+            // --- DATA LIBRARIES ---
+            const learnContent = { c_prime: { title: 'קוהזיה אפקטיבית (c′)', text: '<p>מייצגת את רכיב חוזק הגזירה של הקרקע שאינו תלוי במאמץ הנורמלי. היא נובעת מקשרים אלקטרוכימיים בין חלקיקים דקים (חרסיות) או מצמנטציה. במונחים פשוטים, זוהי "הדביקות" של הקרקע. עבור חול נקי, ערך זה הוא לרוב אפס.</p>' }, phi_deg: { title: 'זווית חיכוך פנימי (φ′)', text: '<p>מייצגת את רכיב חוזק הגזירה הנובע מחיכוך ושילוב בין-חלקיקי (interlocking). היא תלויה בעיקר בצפיפות הקרקע, במינרלוגיה של החלקיקים, בצורתם ובהתפלגות גודלם. ערכים גבוהים יותר מצביעים על התנגדות חיכוך גדולה יותר.</p>' }, gamma_val: { title: 'משקל מרחבי טבעי/כולל (γ)', text: '<p>משקל הקרקע ליחידת נפח במצבה הטבעי בשדה. ערך זה משמש לחישוב המאמצים בקרקע מעל מפלס מי התהום.</p>' }, dw_val: { title: 'עומק מפלס מי תהום (Dw)', text: '<p>המרחק האנכי מפני הקרקע אל מפלס מי התהום. למיקום מי התהום יש השפעה קריטית על המאמצים האפקטיביים, ולכן על חוזק הקרקע ותסבולתה.</p>' }, gamma_sat_val: { title: 'משקל מרחבי רווי (γsat)', text: '<p>משקל הקרקע ליחידת נפח כאשר כל החללים בין הגרגרים מלאים במים. ערך זה משמש לחישוב המשקל המרחבי השקוע (בציפה) של הקרקע מתחת למפלס מי התהום.</p>' }, Df_val: { title: 'עומק ביסוס (Df)', text: '<p>המרחק האנכי מפני הקרקע עד לתחתית היסוד. עומק הביסוס קובע את גודל העומס העליון (surcharge) הפועל על הקרקע ומסייע לייצוב היסוד.</p>' }, B_val: { title: 'רוחב יסוד (B)', text: '<p>המידה הקטנה יותר של בסיס היסוד. לרוחב היסוד יש השפעה ישירה על תסבולת הקרקע, במיוחד באיבר המשקל העצמי של משוואת טרצגי.</p>' }, foundation_shape: { title: 'צורת היסוד', text: '<p>מנגנון הכשל ופיזור המאמצים מתחת ליסוד משתנים עם צורתו. מקדמי הצורה (sc, sγ) הם תיקונים אמפיריים למשוואת טרצגי המקורית (שפותחה ליסוד נמשך) כדי להתחשב באפקטים תלת-ממדיים.</p>' }, h_f: { title: 'עובי יסוד (hf)', text: '<p>עובי פלטת הבטון של היסוד. נתון זה נדרש לחישוב משקל עצמי של היסוד, אשר יש להפחית מהתסבולת הברוטו כדי לקבל את העומס הנקי המותר על האלמנט.</p>' }, col_b: { title: 'מידת עמוד (b_col, l_col)', text: '<p>מידות חתך העמוד הנתמך על ידי היסוד. נתון זה נדרש לחישוב מדויק של משקל האדמה הפועל על היסוד (מפחיתים את שטח העמוד משטח היסוד).</p>' }, col_l: { title: 'מידת עמוד (b_col, l_col)', text: '<p>מידות חתך העמוד הנתמך על ידי היסוד. נתון זה נדרש לחישוב מדויק של משקל האדמה הפועל על היסוד (מפחיתים את שטח העמוד משטח היסוד).</p>' }, FS_val: { title: 'מקדם בטיחות (FS)', text: '<p>מקדם מספרי המיושם כדי להמיר את תסבולת ההרס (q_ult) לתסבולת מותרת (q_all). הוא מתחשב באי-ודאויות הקיימות בתכונות הקרקע, בהנחות התיאורטיות ובעומסים. ערכים מקובלים הם בין 2.5 ל-3.5.</p>' }, required_load: { title: 'עומס תכן נדרש (P_net,req)', text: '<p>העומס הנקי שהמבנה צפוי להעביר ליסוד. במצב תכנון, המחשבון ימצא את מידת היסוד (B) הקטנה ביותר שתוכל לשאת בבטחה עומס זה.</p>' }, failure_mechanism: { title: 'מנגנון הכשל לפי טרצגי', text: '<p>השרטוט ממחיש את המודל התיאורטי של טרצגי להתפתחות כשל גזירה כללי בקרקע תחת יסוד רדוד. המודל מחלק את הקרקע מתחת ליסוד לשלושה אזורים עיקריים, אשר נעקרים יחדיו כיחידה אחת בזמן הכשל.</p>' }, failure_zone1: { title: 'אזור I: טריז אקטיבי', text: '<h3>טריז הגזירה האקטיבי</h3><p>אזור זה נמצא ישירות מתחת לבסיס היסוד ונע יחד איתו כלפי מטה כיחידה קשיחה אחת. הוא נמצא במצב "אקטיבי" של רנקין, ודוחף את שני האזורים הסמוכים (אזור II) הצידה ולמעלה.</p><p>הזווית של טריז זה עם האופק היא φ′ (זווית החיכוך הפנימי של הקרקע).</p>' }, failure_zone2: { title: 'אזור II: אזור גזירה רדיאלי', text: '<h3>אזור הגזירה הרדיאלי (פראנדל)</h3><p>אזורים אלה, משני צידי הטריז האקטיבי, הם אזורי מעבר. הכשל בהם מתפתח לאורך משטחי החלקה שהם שילוב של קו ישר וספירלה לוגריתמית (במודל המלא של פראנדל). אזור זה מעביר את המאמצים מהטריז האקטיבי (I) אל הטריז הפסיבי (III).</p>' }, failure_zone3: { title: 'אזור III: טריז פסיבי', text: '<h3>טריז התנגדות פסיבי</h3><p>אזורים אלה הם החיצוניים ביותר. הם נדחפים כלפי מעלה והצידה על ידי אזורי הגזירה הרדיאליים, ונמצאים במצב "פסיבי" של רנקין. הם מספקים את ההתנגדות הסופית לתנועת הקרקע.</p><p>הזווית של משטח הכשל של טריז זה עם האופק היא 45° - φ′/2.</p>' } };
+            const soilLibrary = { dense_sand: { c: 0, phi: 36, gamma: 19 }, loose_sand: { c: 0, phi: 30, gamma: 17 }, hard_clay:  { c: 75, phi: 8, gamma: 20 }, soft_clay:  { c: 20, phi: 2, gamma: 17 }, sandy_gravel: { c: 0, phi: 40, gamma: 21 } };
+            
+            // --- FUNCTION DEFINITIONS ---
+            
+            function openImageInModal(canvasElement) { const dataUrl = canvasElement.toDataURL('image/png', 1.0); modalImage.src = dataUrl; imageModal.classList.add('visible'); }
+            function showConfirmationModal(text, callback) { confirmModalText.textContent = text; confirmModal.classList.add('visible'); confirmModalYes.onclick = () => { callback(true); confirmModal.classList.remove('visible'); }; confirmModalNo.onclick = () => { callback(false); confirmModal.classList.remove('visible'); }; confirmModalClose.onclick = () => { callback(false); confirmModal.classList.remove('visible'); }; }
+            function showLearnModal(key) {
+                 if (!learnContent[key]) return;
+                 const content = learnContent[key];
+                 learnModalTitle.innerHTML = content.title;
+                 learnModalText.innerHTML = content.text;
+                 learnModal.classList.add('visible');
+            }
+            
+            function updateAllTabs() {
+                renderFinalAccount();
+                renderQuantitiesSummary();
+                calculateFinalTotals();
+                renderGanttChart();
+            }
+
+            function updateCostTabDimensions() { 
+                const shape = foundationShapeSelect.value; 
+                const B = parseFloat(BValInput.value) || 0; 
+                const hf_cm = parseFloat(hfInput.value) || 0; 
+                const displayDiv = document.getElementById('foundation-dimensions-display'); 
+                const stripInputContainer = document.getElementById('strip-length-input-container'); 
+                let displayText = ''; 
+                if (shape === 'square') { displayText = `יסוד ריבועי, מידות: ${B}x${B} מ', עובי: ${hf_cm} ס"מ`; stripInputContainer.classList.add('hidden'); 
+                } else if (shape === 'circular') { displayText = `יסוד עגול, קוטר: ${B} מ', עובי: ${hf_cm} ס"מ`; stripInputContainer.classList.add('hidden'); 
+                } else if (shape === 'strip') { displayText = `יסוד נמשך, רוחב: ${B} מ', עובי: ${hf_cm} ס"מ`; stripInputContainer.classList.remove('hidden'); 
+                } 
+                displayDiv.textContent = displayText; 
+            }
+
+            function updateBoq(params) {
+                const { Df, B, shape, hf } = params; 
+                if ([Df, B, hf].some(isNaN) || B <= 0 || Df < 0 || hf < 0) { currentBoq = []; return; } 
+                
+                const stripLength = (shape === 'strip') ? (parseFloat(stripLengthInput.value) || 1.0) : 1.0;
+                let excavationVol = 0, concreteVol = 0, formworkArea = 0;
+
+                if (shape === 'square') { const area = B * B; excavationVol = area * Df; concreteVol = area * hf; formworkArea = 4 * B * hf; }
+                else if (shape === 'circular') { const area = Math.PI * (B / 2) ** 2; excavationVol = area * Df; concreteVol = area * hf; formworkArea = Math.PI * B * hf; }
+                else if (shape === 'strip') { excavationVol = B * Df * stripLength; concreteVol = B * hf * stripLength; formworkArea = 2 * stripLength * hf; }
+                
+                const steelMethod = document.querySelector('input[name="steel-calc-method"]:checked').value;
+                let steelQty = 0;
+                if (steelMethod === 'ratio') {
+                    steelQty = (concreteVol * (parseFloat(steelRatioInput.value) || 0)) / 1000;
+                } else if (steelMethod === 'total') {
+                    steelQty = parseFloat(steelTotalWeightInput.value) || 0;
+                } else if (steelMethod === 'detailed') {
+                    const diaX = parseFloat(document.getElementById('steel-dia-x').value);
+                    const spacingX = parseFloat(document.getElementById('steel-spacing-x').value) / 100;
+                    const diaY = parseFloat(document.getElementById('steel-dia-y').value);
+                    const spacingY = parseFloat(document.getElementById('steel-spacing-y').value) / 100;
+                    
+                    if (![diaX, spacingX, diaY, spacingY].some(isNaN) && spacingX > 0 && spacingY > 0) {
+                        const steelDensity = 7850;
+                        const len = (shape === 'square') ? B : (shape === 'strip' ? stripLength : B);
+                        
+                        const numBarsX = Math.floor(len / spacingX) + 1;
+                        const lenBarsX = B;
+                        const totalLenX = numBarsX * lenBarsX;
+                        
+                        const numBarsY = Math.floor(B / spacingY) + 1;
+                        const lenBarsY = len;
+                        const totalLenY = numBarsY * lenBarsY;
+
+                        const volBarX = Math.PI * (diaX / 2000)**2 * totalLenX;
+                        const volBarY = Math.PI * (diaY / 2000)**2 * totalLenY;
+                        
+                        steelQty = ((volBarX + volBarY) * steelDensity) / 1000;
+                    }
+                }
+
+                currentBoq = [ 
+                    { name: 'חפירה ועבודות עפר', qty: excavationVol, unit: 'מ"ק', price: parseFloat(boqExcavationPrice.value) || 0 }, 
+                    { name: 'בטון', qty: concreteVol, unit: 'מ"ק', price: parseFloat(boqConcretePrice.value) || 0 }, 
+                    { name: 'טפסנות', qty: formworkArea, unit: 'מ"ר', price: parseFloat(boqFormworkPrice.value) || 0 }, 
+                    { name: 'פלדה (ברזל)', qty: steelQty, unit: 'טון', price: parseFloat(boqSteelPrice.value) || 0 }, 
+                ]; 
+                updateCostEstimationTab(); 
+            }
+            
+            function updateCostEstimationTab() { 
+                if (!currentBoq.length) return; 
+                const getBoqValue = (name, key) => currentBoq.find(item => item.name.includes(name))?.[key]; 
+                boqExcavationQty.textContent = getBoqValue('חפירה', 'qty')?.toFixed(2) ?? '-'; 
+                boqConcreteQty.textContent = getBoqValue('בטון', 'qty')?.toFixed(2) ?? '-'; 
+                boqFormworkQty.textContent = getBoqValue('טפסנות', 'qty')?.toFixed(2) ?? '-'; 
+                boqSteelQty.textContent = getBoqValue('פלדה', 'qty')?.toFixed(3) ?? '-'; 
+                const formatCurrency = val => val.toLocaleString('he-IL', { maximumFractionDigits: 0 }); 
+                boqExcavationTotal.textContent = formatCurrency((getBoqValue('חפירה', 'qty') || 0) * (getBoqValue('חפירה', 'price') || 0)); 
+                boqConcreteTotal.textContent = formatCurrency((getBoqValue('בטון', 'qty') || 0) * (getBoqValue('בטון', 'price') || 0)); 
+                boqFormworkTotal.textContent = formatCurrency((getBoqValue('טפסנות', 'qty') || 0) * (getBoqValue('טפסנות', 'price') || 0)); 
+                boqSteelTotal.textContent = formatCurrency((getBoqValue('פלדה', 'qty') || 0) * (getBoqValue('פלדה', 'price') || 0)); 
+            }
+
+            function renderFinalAccount() {
+                finalAccountTableBody.innerHTML = '';
+                if (finalAccountGroups.length === 0) {
+                    finalAccountTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-gray-500 p-4">החשבון ריק. הוסף פריטים.</td></tr>`;
+                    return;
+                }
+                finalAccountGroups.forEach((group) => {
+                    const groupTotal = group.unitCost * group.groupQuantity;
+                    const isFoundation = group.type === 'foundation';
+                    let headerRow = document.createElement('tr');
+                    headerRow.className = 'group-header-row';
+                    headerRow.dataset.groupId = group.id;
+                    let fullDescription = isFoundation ? `${group.name} ${group.index}${group.version > 1 ? String.fromCharCode(1487 + group.version-2) : ''} <span class="text-sm font-normal text-gray-500 dark:text-gray-400">${group.descriptionDetails || ''}</span>` : group.name;
+                    fullDescription += ` <span class="category-badge" style="background-color: ${getCategoryColor(group.category)}">${group.category}</span>`;
+                    
+                    headerRow.innerHTML = `
+                        <td class="text-right font-bold flex items-center gap-2">${isFoundation ? `<svg class="arrow-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>` : ''}<div>${fullDescription}</div></td>
+                        <td><div class="qty-controls"><button class="qty-btn" data-action="decrease" data-id="${group.id}">-</button><span class="font-bold text-lg mx-2">${group.groupQuantity}</span><button class="qty-btn" data-action="increase" data-id="${group.id}">+</button></div></td>
+                        <td>${group.unit}</td>
+                        <td>${group.unitCost.toLocaleString('he-IL', {style: 'currency', currency: 'ILS', minimumFractionDigits: 2})}</td>
+                        <td>${groupTotal.toLocaleString('he-IL', {style: 'currency', currency: 'ILS'})}</td>
+                        <td><button class="qty-btn delete-btn" data-action="delete" data-id="${group.id}">X</button></td>
+                    `;
+                    finalAccountTableBody.appendChild(headerRow);
+
+                    if (isFoundation && group.components) {
+                        group.components.forEach(comp => {
+                            if (comp.qty > 0) {
+                                let compRow = document.createElement('tr');
+                                compRow.className = 'component-row';
+                                compRow.dataset.parentGroupId = group.id;
+                                const totalQty = comp.qty * group.groupQuantity;
+                                const totalCost = totalQty * comp.price;
+                                compRow.innerHTML = `<td class="component-name">${comp.name}</td> <td>${totalQty.toFixed(3)}</td> <td>${comp.unit}</td> <td>${comp.price.toLocaleString('he-IL')} ₪</td> <td>${totalCost.toLocaleString('he-IL')} ₪</td> <td></td>`;
+                                finalAccountTableBody.appendChild(compRow);
+                            }
+                        });
+                    }
+                });
+            }
+
+            function getCategoryColor(category) {
+                switch(category) {
+                    case 'חומרים': return '#3b82f6';
+                    case 'עבודה': return '#10b981';
+                    case 'ציוד': return '#f97316';
+                    case 'כללי': return '#8b5cf6';
+                    case 'יסוד-ביסוס': return '#6366f1';
+                    default: return '#6b7280';
+                }
+            }
+
+            function calculateFinalTotals() { 
+                const directCost = finalAccountGroups.reduce((sum, group) => sum + (group.unitCost * group.groupQuantity), 0); 
+                const unforeseenPercent = parseFloat(unforeseenPercentInput.value) || 0; 
+                const overheadPercent = parseFloat(overheadPercentInput.value) || 0;
+                const retentionPercent = parseFloat(retentionPercentInput.value) || 0; 
+                const vatPercent = parseFloat(vatPercentInput.value) || 0; 
+
+                const unforeseenValue = directCost * (unforeseenPercent / 100);
+                const costPlusUnforeseen = directCost + unforeseenValue;
+                const overheadValue = costPlusUnforeseen * (overheadPercent / 100);
+                const subtotal = costPlusUnforeseen + overheadValue;
+                const retentionValue = subtotal * (retentionPercent / 100); 
+                const vatValue = (subtotal - retentionValue) * (vatPercent / 100); 
+                const finalTotal = subtotal - retentionValue + vatValue; 
+
+                const formatCurrency = (val) => val.toLocaleString('he-IL', { style: 'currency', currency: 'ILS' }); 
+                summaryDirectCost.textContent = formatCurrency(directCost); 
+                summaryUnforeseenValue.textContent = formatCurrency(unforeseenValue);
+                summaryOverheadValue.textContent = formatCurrency(overheadValue);
+                summarySubtotal.textContent = formatCurrency(subtotal); 
+                summaryRetentionValue.textContent = `(${formatCurrency(retentionValue)})`; 
+                summaryVatValue.textContent = formatCurrency(vatValue); 
+                summaryFinalTotal.textContent = formatCurrency(finalTotal); 
+            }
+            
+            function renderQuantitiesSummary() { const materialSummary = {}; const otherSummary = []; finalAccountGroups.forEach(group => { if (group.type === 'foundation' && group.components) { group.components.forEach(comp => { if (!materialSummary[comp.name]) { materialSummary[comp.name] = { total: 0, unit: comp.unit }; } materialSummary[comp.name].total += comp.qty * group.groupQuantity; }); } else if (group.type === 'other') { otherSummary.push({ description: group.name, quantity: group.groupQuantity, unit: group.unit }); } }); quantitiesMaterialsBody.innerHTML = ''; if(Object.keys(materialSummary).length === 0 || Object.values(materialSummary).every(m => m.total === 0)) { quantitiesMaterialsBody.innerHTML = `<tr><td colspan="3" class="text-center text-gray-500 p-4">אין כמויות חומרים.</td></tr>`; } else { Object.entries(materialSummary).forEach(([name, data]) => { if (data.total > 0) { const row = `<tr><td class="text-right">${name}</td><td>${data.total.toFixed(2)}</td><td>${data.unit}</td></tr>`; quantitiesMaterialsBody.innerHTML += row; } }); } quantitiesOthersBody.innerHTML = ''; if (otherSummary.length === 0) { quantitiesOthersBody.innerHTML = `<tr><td colspan="3" class="text-center text-gray-500 p-4">אין סעיפים אחרים.</td></tr>`; } else { otherSummary.forEach(item => { const row = `<tr><td class="text-right">${item.description}</td><td>${item.quantity.toFixed(2)}</td><td>${item.unit}</td></tr>`; quantitiesOthersBody.innerHTML += row; }); } }
+
+            function renderGanttChart() {
+                ganttContainer.innerHTML = ''; // Clear previous chart
+                if (finalAccountGroups.length === 0) {
+                    ganttContainer.innerHTML = `<div class="text-center p-8 text-gray-500"><p>הוסף סעיפים עם משך ביצוע לחשבון הסופי.</p></div>`;
+                    return;
+                }
+
+                const tasks = finalAccountGroups.filter(g => g.duration > 0);
+                if (tasks.length === 0) {
+                    ganttContainer.innerHTML = `<div class="text-center p-8 text-gray-500"><p>לא נמצאו סעיפים עם משך ביצוע מוגדר.</p></div>`;
+                    return;
+                }
+
+                let totalDuration = 0;
+                let startDay = 1;
+                tasks.forEach(task => {
+                    task.startDay = startDay;
+                    task.endDay = startDay + task.duration - 1;
+                    startDay += task.duration;
+                    totalDuration = task.endDay;
+                });
+
+                const dayWidth = 40; // width of one day in pixels
+                const timelineWidth = totalDuration * dayWidth;
+
+                const gridDiv = document.createElement('div');
+                gridDiv.className = 'gantt-grid';
+                gridDiv.style.width = `${250 + timelineWidth}px`;
+                
+                // Header
+                const headerRow = document.createElement('div');
+                headerRow.className = 'gantt-header';
+                headerRow.innerHTML = `
+                    <div class="gantt-task-name">שם הפעילות</div>
+                    <div class="gantt-timeline-header" style="position: relative;">
+                        ${Array.from({length: totalDuration}, (_, i) => `<span style="position: absolute; right: ${i * dayWidth}px; width: ${dayWidth}px; text-align: center; font-size: 0.8em;">יום ${i+1}</span>`).join('')}
+                    </div>
+                `;
+                gridDiv.appendChild(headerRow);
+
+                // Task Rows
+                tasks.forEach(task => {
+                    const taskRow = document.createElement('div');
+                    taskRow.className = 'gantt-row';
+                    
+                    const barWidth = task.duration * dayWidth - 4; // -4 for padding
+                    const barStart = (task.startDay - 1) * dayWidth;
+
+                    taskRow.innerHTML = `
+                        <div class="gantt-task-name">${task.name} ${task.index || ''}</div>
+                        <div class="gantt-timeline">
+                            ${Array.from({length: totalDuration}, (_, i) => `<div class="gantt-day-marker" style="right: ${(i+1) * dayWidth}px;"></div>`).join('')}
+                            <div class="gantt-task-bar" data-category="${task.category}" style="right: ${barStart}px; width: ${barWidth}px;">
+                                ${task.name} (${task.duration} י')
+                            </div>
+                        </div>
+                    `;
+                    gridDiv.appendChild(taskRow);
+                });
+
+                ganttContainer.appendChild(gridDiv);
+            }
+
+            // --- LOCAL STORAGE FUNCTIONS ---
+            function saveAccountToStorage() { localStorage.setItem('finalAccountGroups_v5', JSON.stringify(finalAccountGroups)); }
+            function loadAccountFromStorage() { const savedData = localStorage.getItem('finalAccountGroups_v5'); finalAccountGroups = savedData ? JSON.parse(savedData) : []; }
+            
+            // --- UI & THEME LOGIC ---
+            const applyTheme = (theme) => { if (theme === 'dark') { document.documentElement.classList.add('dark'); themeIconSun.classList.add('hidden'); themeIconMoon.classList.remove('hidden'); } else { document.documentElement.classList.remove('dark'); themeIconSun.classList.remove('hidden'); themeIconMoon.classList.add('hidden'); } drawAllCanvases(true); renderGanttChart(); };
+            
+            const applyUnitSystem = (system) => {
+                currentUnitSystem = system;
+                unitToggleButton.classList.toggle('kpa-active', system === 'kpa');
+                unitToggleButton.classList.toggle('ton-active', system === 'ton');
+                const pressureUnit = system === 'kpa' ? 'kPa' : 't/m²';
+                const densityUnit = system === 'kpa' ? 'kN/m³' : 't/m³';
+                document.getElementById('c-prime-unit-label').textContent = `[${pressureUnit}]`;
+                document.getElementById('gamma-unit-label').textContent = `[${densityUnit}]`;
+                document.getElementById('gamma-sat-unit-label').textContent = `[${densityUnit}]`;
+                
+                if (lastCalculationResult.qu) {
+                    animateResults(lastCalculationResult);
+                }
+                if (bearingChart) {
+                    updateGraph();
+                }
+            };
+
+            // --- FIX: Logic for switching between modes ---
+            function switchMode(newMode) {
+                currentMode = newMode;
+                if (newMode === 'design') {
+                    // Switch to design mode
+                    calcModeBtn.classList.remove('active');
+                    designModeBtn.classList.add('active');
+                    bValInputContainer.classList.add('hidden');
+                    designInputsDiv.classList.remove('hidden');
+                    calculateButton.textContent = 'תכנן';
+                    graphContainer.classList.add('hidden');
+                } else { // 'analysis' mode
+                    calcModeBtn.classList.add('active');
+                    designModeBtn.classList.remove('active');
+                    bValInputContainer.classList.remove('hidden');
+                    designInputsDiv.classList.add('hidden');
+                    calculateButton.textContent = 'חשב';
+                    if (bearingChart) graphContainer.classList.remove('hidden');
+                }
+                // Clear previous results when switching modes
+                resultsBox.classList.add('hidden');
+                designResultTextDiv.classList.add('hidden');
+            }
+            
+            // --- ENGINEERING CALCULATION LOGIC ---
+            const terzaghiFactorsTable = {0:{Nc:5.7,Nq:1,N_gamma:0},5:{Nc:7.3,Nq:1.6,N_gamma:0.5},10:{Nc:9.6,Nq:2.7,N_gamma:1.2},15:{Nc:12.9,Nq:4.4,N_gamma:2.5},20:{Nc:17.7,Nq:7.4,N_gamma:5},25:{Nc:25.1,Nq:12.7,N_gamma:9.7},30:{Nc:37.2,Nq:22.5,N_gamma:19.7},34:{Nc:52.6,Nq:36.5,N_gamma:35},35:{Nc:57.8,Nq:41.4,N_gamma:42.4},40:{Nc:95.7,Nq:81.3,N_gamma:100.4},45:{Nc:172.3,Nq:173.3,N_gamma:297.5}};
+            function linearInterpolate(x,x0,y0,x1,y1){if(x1===x0)return y0;return y0+(x-x0)*(y1-y0)/(x1-x0)}
+            function getBearingCapacityFactors(p){p=parseFloat(p);const v=Object.keys(terzaghiFactorsTable).map(Number).sort((a,b)=>a-b);if(p<v[0]||p>v[v.length-1]||isNaN(p)){return{Nc:NaN,Nq:NaN,N_gamma:NaN}}if(terzaghiFactorsTable.hasOwnProperty(p))return{...terzaghiFactorsTable[p],interpolated:false};let x0,x1;for(let i=0;i<v.length-1;i++){if(p>=v[i]&&p<v[i+1]){x0=v[i];x1=v[i+1];break}}if(x0===undefined||x1===undefined)return{Nc:NaN,Nq:NaN,N_gamma:NaN};const f0=terzaghiFactorsTable[x0],f1=terzaghiFactorsTable[x1];return{Nc:linearInterpolate(p,x0,f0.Nc,x1,f1.Nc),Nq:linearInterpolate(p,x0,f0.Nq,x1,f1.Nq),N_gamma:linearInterpolate(p,x0,f0.N_gamma,x1,f1.N_gamma),interpolated:true,phi_0:x0,f_0:f0,phi_1:x1,f_1:f1}}
+            function getShapeFactors(s){let sc=NaN,sq=NaN,sg=NaN;switch(s.toLowerCase()){case"strip":sc=1;sq=1;sg=1;break;case"square":sc=1.3;sq=1;sg=0.8;break;case"circular":sc=1.3;sq=1;sg=0.6;break;}return{s_c:sc,s_q:sq,s_gamma:sg}}
+            
+            function terzaghiBearingCapacity(data) {
+                let { c, phi, gamma, Df, B, shape, useGWT, Dw, gamma_sat } = data;
+                c = parseFloat(c); phi = parseFloat(phi); gamma = parseFloat(gamma); Df = parseFloat(Df); B = parseFloat(B); Dw = parseFloat(Dw); gamma_sat = parseFloat(gamma_sat);
+
+                if ([c, phi, gamma, Df, B].some(isNaN) || Df < 0 || B <= 0 || gamma <= 0 || c < 0) return { q_u: NaN };
+                if (useGWT && [Dw, gamma_sat].some(isNaN)) return { q_u: NaN };
+
+                let factors = getBearingCapacityFactors(phi);
+                if (phi === 0) factors = { Nc: 5.7, Nq: 1, N_gamma: 0, interpolated: false };
+                
+                const shapeFactors = getShapeFactors(shape);
+                if ([factors.Nc, factors.Nq, factors.N_gamma].some(isNaN) || Object.values(shapeFactors).some(isNaN)) return { q_u: NaN, factors };
+                
+                let q_eff, gamma_eff, gwtCase = 0;
+                const gamma_w = 9.81;
+
+                if (!useGWT || Dw >= Df + B) {
+                    gwtCase = 1;
+                    q_eff = gamma * Df;
+                    gamma_eff = gamma;
+                } else {
+                    const gamma_sub = gamma_sat - gamma_w;
+                    if (Dw <= 0) {
+                        gwtCase = 2.1;
+                        q_eff = gamma_sub * Df;
+                        gamma_eff = gamma_sub;
+                    } else if (Dw < Df) {
+                        gwtCase = 2.2;
+                        q_eff = (gamma * Dw) + (gamma_sub * (Df - Dw));
+                        gamma_eff = gamma_sub;
+                    } else { 
+                        gwtCase = 3;
+                        q_eff = gamma * Df;
+                        gamma_eff = gamma_sub + ((Dw - Df) / B) * (gamma - gamma_sub);
+                        gamma_eff = Math.min(gamma, Math.max(gamma_sub, gamma_eff));
+                    }
+                }
+                
+                const { Nc, Nq, N_gamma } = factors;
+                const { s_c, s_q, s_gamma } = shapeFactors;
+                const term1 = c * Nc * s_c;
+                const term2 = q_eff * Nq * s_q;
+                const term3 = 0.5 * gamma_eff * B * N_gamma * s_gamma;
+                const q_u = term1 + term2 + term3;
+
+                return { q_u, factors, intermediates: { q_eff, gamma_eff, gwtCase, term1, term2, term3, ...shapeFactors } };
+            }
+
+            function calculateAllowableLoad(params) {
+                const {q_u} = terzaghiBearingCapacity(params);
+                if (isNaN(q_u) || params.FS <= 0) return NaN;
+
+                const qall = q_u / params.FS;
+                
+                const { B, hf, col_b, col_l, Df, gamma, shape } = params;
+                const gamma_c = 25;
+
+                if (shape === 'strip') {
+                    const W_foundation_per_meter = B * hf * gamma_c;
+                    const soilHeightOverFoundation = Math.max(0, Df - hf);
+                    const W_soil_per_meter = B * soilHeightOverFoundation * gamma;
+                    const q_net_all = qall - (W_foundation_per_meter / B) - (W_soil_per_meter / B);
+                    // For strip, we return load per meter
+                    return q_net_all * B;
+                } else {
+                    const A_foundation = (shape === 'square') ? B * B : Math.PI * (B/2)**2;
+                    const W_foundation = A_foundation * hf * gamma_c;
+                    const A_column = (shape === 'circular') ? (Math.PI * (col_b/2)**2) : (col_b * col_l);
+                    const soilHeightOverFoundation = Math.max(0, Df - hf);
+                    const W_soil = (A_foundation - A_column) * soilHeightOverFoundation * gamma;
+                    const P_gross_all = qall * A_foundation;
+                    return P_gross_all - W_foundation - W_soil;
+                }
+            }
+
+            // --- FIX: This function now handles the iterative design process ---
+            function performDesignCalculation() {
+                const requiredLoadRaw = parseFloat(requiredLoadInput.value);
+                if (isNaN(requiredLoadRaw) || requiredLoadRaw <= 0) {
+                    alert('אנא הזן עומס תכן נדרש חוקי וחיובי.');
+                    return;
+                }
+                // Convert required load to kN if needed
+                const requiredLoad = currentUnitSystem === 'ton' ? requiredLoadRaw * KPA_PER_TON : requiredLoadRaw;
+                
+                let params = getInputs();
+                let b = 0.5, p_net_all = 0;
+                const maxIterations = 200;
+                let iteration = 0, found = false;
+
+                // Iterative search for the minimum B
+                while(iteration < maxIterations && b <= 20) {
+                    params.B = b;
+                    p_net_all = calculateAllowableLoad(params);
+                    if (!isNaN(p_net_all) && p_net_all >= requiredLoad) {
+                        found = true;
+                        break;
+                    }
+                    b += 0.05; // Increment B by 5cm
+                    iteration++;
+                }
+
+                if (!found) {
+                    alert('לא נמצא פתרון. אנא בדוק את נתוני הקלט (ייתכן שהעומס גדול מדי עבור תנאי הקרקע).');
+                    return;
+                }
+                
+                // Round B to the nearest 5cm
+                const roundedB = Math.ceil(b * 20) / 20;
+                BValInput.value = roundedB.toFixed(2);
+                
+                // --- Display design results ---
+                updateBoq(getInputs());
+                const estimatedCost = currentBoq.reduce((sum, item) => sum + (item.qty * item.price), 0);
+
+                designResultTextDiv.classList.remove('hidden');
+                designBOutput.textContent = `רוחב יסוד נדרש (B) = ${roundedB.toFixed(2)} מ'`;
+                designCostOutput.textContent = `עלות ישירה מוערכת ליסוד: ${estimatedCost.toLocaleString('he-IL', {style: 'currency', currency: 'ILS'})}`;
+
+                // Run a final analysis with the found B to update all displays
+                triggerCalculationAndAnimation(true);
+            }
+            
+            // --- DRAWING & ANIMATION FUNCTIONS ---
+            function drawAllCanvases(isStatic = false) {
+                drawFoundationSection();
+                drawFoundationPlan();
+                if (isStatic) {
+                   drawFailureMechanism(1);
+                } else {
+                   animateFailureMechanism();
+                }
+                if (bearingChart) updateGraph();
+            }
+
+            function drawFoundationSection(){const Df=parseFloat(DfValInput.value),B=parseFloat(BValInput.value),hf=parseFloat(hfInput.value)/100,col_b=parseFloat(colBInput.value)/100,useGWT=gwtCheckbox.checked,Dw=parseFloat(dwValInput.value),cw=sectionCanvas.width,ch=sectionCanvas.height,ctx=sectionCanvas.getContext("2d"),isDark=document.documentElement.classList.contains("dark");ctx.clearRect(0,0,cw,ch);ctx.fillStyle=isDark?"#1F2937":"#F9FAFB";ctx.fillRect(0,0,cw,ch);if(!(isNaN(Df)||isNaN(B)||0>Df||0>=B)){const gLvlY=50,sPadB=40,maxDepth=Math.max(2,1.5*Df,useGWT&&!isNaN(Dw)?1.2*Dw:0,hf+1),maxWidth=Math.max(2,1.5*B),effScale=Math.min((ch-gLvlY-sPadB)/maxDepth,cw/maxWidth)*.85,Dfs=Df*effScale,Bs=B*effScale,Dws=Dw*effScale,hf_s=hf*effScale,col_b_s=col_b*effScale,fBaseY=gLvlY+Dfs,fTopY=fBaseY-hf_s,fX=(cw-Bs)/2;if(useGWT&&!isNaN(Dw)&&0<=Dw){const gwtY=gLvlY+Dws;ctx.fillStyle=isDark?"rgba(99, 102, 241, 0.1)":"rgba(173,216,230,0.3)";ctx.fillRect(0,gwtY,cw,ch-gwtY);ctx.beginPath();ctx.setLineDash([5,3]);ctx.moveTo(0,gwtY);ctx.lineTo(cw,gwtY);ctx.strokeStyle=isDark?"#A5B4FC":"#0077be";ctx.lineWidth=1.5;ctx.stroke();ctx.setLineDash([]);ctx.font="13px Assistant";ctx.fillStyle=isDark?"#C7D2FE":"#005a8d";ctx.textAlign="left";ctx.fillText(`\u2207 (D_w=${Dw.toFixed(1)}m)`,15,gwtY-5)}ctx.beginPath();ctx.moveTo(0,gLvlY);ctx.lineTo(cw,gLvlY);ctx.strokeStyle=isDark?"#a16207":"#A0522D";ctx.lineWidth=2;ctx.stroke();ctx.font="13px Assistant";ctx.fillStyle=isDark?"#E5E7EB":"#1F2937";ctx.textAlign="left";ctx.fillText("\u05e4\u05e0\u05d9 \u05d4\u05e7\u05e8\u05e7\u05e2",5,gLvlY-8);ctx.fillStyle=isDark?"#6B7280":"#A9A9A9";ctx.fillRect(fX,fTopY,Bs,hf_s);ctx.strokeStyle=isDark?"#9CA3AF":"#696969";ctx.lineWidth=1;ctx.strokeRect(fX,fTopY,Bs,hf_s);const colX=(cw-col_b_s)/2;if(!isNaN(col_b_s)&&0<col_b_s){ctx.fillStyle=isDark?"#9CA3AF":"#D3D3D3";ctx.fillRect(colX,20,col_b_s,fTopY-20);ctx.strokeRect(colX,20,col_b_s,fTopY-20);// --- קטע הקוד החדש והמתוקן ---
+if (lastCalculationResult.p_net_all > 0) {
+    const p_net_all = lastCalculationResult.p_net_all;
+    const conversionFactor = currentUnitSystem === 'ton' ? 1/KPA_PER_TON : 1;
+    const loadUnit = currentUnitSystem === 'kpa' ? 'kN' : 't';
+    const p_display_val = (p_net_all * conversionFactor).toFixed(1);
+
+    ctx.strokeStyle = "#ef4444";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    // ציור קו החץ כלפי מטה
+    ctx.moveTo(cw / 2, 20); 
+    ctx.lineTo(cw / 2, 30); 
+    // ציור ראש החץ
+    ctx.moveTo(cw / 2 - 5, 25); 
+    ctx.lineTo(cw / 2, 30);     
+    ctx.lineTo(cw / 2 + 5, 25); 
+    ctx.stroke();
+    
+    // הוספת הטקסט עם הערך
+    ctx.font = "bold 14px Assistant";
+    ctx.fillStyle = "#ef4444";
+    ctx.textAlign = "left"; // כדי שהטקסט יתחיל מימין לחץ
+    ctx.fillText(`P = ${p_display_val} ${loadUnit}`, cw / 2 + 15, 28);
+}}ctx.fillStyle=isDark?"#E5E7EB":"#1F2937";ctx.strokeStyle=ctx.fillStyle;const dimX_Df=fX-25;0<dimX_Df&&(ctx.beginPath(),ctx.moveTo(dimX_Df,gLvlY),ctx.lineTo(dimX_Df,fBaseY),ctx.stroke(),ctx.beginPath(),ctx.moveTo(dimX_Df-5,gLvlY),ctx.lineTo(dimX_Df+5,gLvlY),ctx.stroke(),ctx.beginPath(),ctx.moveTo(dimX_Df-5,fBaseY),ctx.lineTo(dimX_Df+5,fBaseY),ctx.stroke(),ctx.textAlign="center",ctx.fillText(`Df=${Df.toFixed(1)}m`,dimX_Df-25,gLvlY+Dfs/2+5));const dimY_B=fBaseY+20;ctx.beginPath();ctx.moveTo(fX,dimY_B);ctx.lineTo(fX+Bs,dimY_B);ctx.stroke();ctx.beginPath();ctx.moveTo(fX,dimY_B-5);ctx.lineTo(fX,dimY_B+5);ctx.stroke();ctx.beginPath();ctx.moveTo(fX+Bs,dimY_B-5);ctx.lineTo(fX+Bs,dimY_B+5);ctx.stroke();ctx.textAlign="center";ctx.fillText(`B=${B.toFixed(1)}m`,fX+Bs/2,dimY_B+15)}}
+            function drawFoundationPlan(){const B=parseFloat(BValInput.value),shape=foundationShapeSelect.value,col_b=parseFloat(colBInput.value)/100,col_l=parseFloat(colLInput.value)/100,cw=planCanvas.width,ch=planCanvas.height,ctx=planCanvas.getContext("2d"),isDark=document.documentElement.classList.contains("dark");ctx.clearRect(0,0,cw,ch);ctx.fillStyle=isDark?"#374151":"#4B5563";ctx.fillRect(0,0,cw,ch);if(!(isNaN(B)||0>=B)){const pad=30,availW=cw-2*pad,availH=ch-2*pad,scale=.9*Math.min(availW/B,availH/B),Bs=B*scale,cX=cw/2,cY=ch/2,textColor=isDark?"#E5E7EB":"#1F2937";ctx.strokeStyle="#696969";ctx.fillStyle="#C0C0C0";ctx.lineWidth=2;ctx.font="13px Assistant";ctx.textAlign="center";"square"===shape?(ctx.fillRect(cX-Bs/2,cY-Bs/2,Bs,Bs),ctx.strokeRect(cX-Bs/2,cY-Bs/2,Bs,Bs),ctx.fillStyle=textColor,ctx.fillText(`B=${B.toFixed(1)}m`,cX,cY+Bs/2+15)):"circular"===shape?(ctx.beginPath(),ctx.arc(cX,cY,Bs/2,0,2*Math.PI),ctx.fill(),ctx.stroke(),ctx.fillStyle=textColor,ctx.fillText(`\u05e7\u05d5\u05d8\u05e8=${B.toFixed(1)}m`,cX,cY+Bs/2+15)):"strip"===shape&&(ctx.fillRect(cX-Math.min(2.5*Bs,.9*availW)/2,cY-Bs/2,Math.min(2.5*Bs,.9*availW),Bs),ctx.strokeRect(cX-Math.min(2.5*Bs,.9*availW)/2,cY-Bs/2,Math.min(2.5*Bs,.9*availW),Bs),ctx.fillStyle=textColor,ctx.fillText(`B=${B.toFixed(1)}m`,cX,cY-Bs/2-10),ctx.fillText("(\u05d9\u05e1\u05d5\u05d3 \u05e0\u05de\u05e9\u05da)",cX,cY+Bs/2+15));if(!isNaN(col_b)&&0<col_b){ctx.fillStyle="#A9A9A9";const col_b_s=col_b*scale;"strip"===shape?ctx.fillRect(cX-Math.min(2.5*Bs,.9*availW)/2,cY-col_b_s/2,Math.min(2.5*Bs,.9*availW),col_b_s):"circular"===shape?(ctx.beginPath(),ctx.arc(cX,cY,col_b_s/2,0,2*Math.PI),ctx.fill()):ctx.fillRect(cX-col_b_s/2,cY-col_l*scale/2,col_b_s,col_l*scale)}if(lastCalculationResult&&"number"==typeof lastCalculationResult.p_net_all&&"strip"!==lastCalculationResult.shape)ctx.strokeStyle="#ef4444",ctx.lineWidth=1.5,ctx.beginPath(),ctx.arc(cX,cY,8,0,2*Math.PI),ctx.moveTo(cX-12,cY),ctx.lineTo(cX+12,cY),ctx.moveTo(cX,cY-12),ctx.lineTo(cX,cY+12),ctx.stroke()}}
+            function drawFailureMechanism(p=0){let phi=parseFloat(phiDegInput.value);isNaN(phi)||0>=phi?phi=.1:phi=phi;const phiRad=phi*(Math.PI/180),ctx=failureMechanismCanvas.getContext("2d"),cw=failureMechanismCanvas.width,ch=failureMechanismCanvas.height,isDark=document.documentElement.classList.contains("dark");ctx.clearRect(0,0,cw,ch);ctx.fillStyle=isDark?"#1F2937":"#F9FAFB";ctx.fillRect(0,0,cw,ch);const f_width_scaled=.4*cw,startX=(cw-f_width_scaled)/2,groundLevelY=.3*ch,p1={x:startX,y:groundLevelY},p2={x:startX+f_width_scaled,y:groundLevelY},zone1_height=f_width_scaled/2*Math.tan(phiRad),p3_final={x:startX+f_width_scaled/2,y:groundLevelY+zone1_height},p3={x:p3_final.x,y:groundLevelY+(p3_final.y-groundLevelY)*p},r0=Math.sqrt((p1.x-p3_final.x)**2+(p1.y-p3_final.y)**2),passive_angle=Math.PI/4-phiRad/2,p4_final_L={x:p3_final.x-r0*Math.cos(phiRad),y:p3_final.y+r0*Math.sin(phiRad)},p5_final_L={x:p4_final_L.x-(p4_final_L.y-groundLevelY)/Math.tan(passive_angle),y:groundLevelY},p4_final_R={x:p3_final.x+r0*Math.cos(phiRad),y:p3_final.y+r0*Math.sin(phiRad)},p5_final_R={x:p4_final_R.x+(p4_final_R.y-groundLevelY)/Math.tan(passive_angle),y:groundLevelY},p4L={x:p1.x+(p4_final_L.x-p1.x)*p,y:groundLevelY+(p4_final_L.y-groundLevelY)*p},p5L={x:p1.x+(p5_final_L.x-p1.x)*p,y:groundLevelY},p4R={x:p2.x+(p4_final_R.x-p2.x)*p,y:groundLevelY+(p4_final_R.y-groundLevelY)*p},p5R={x:p2.x+(p5_final_R.x-p2.x)*p,y:groundLevelY};1<=p&&(failureZonePolygons={zone1:[p1,p3,p2],zone2_left:[p1,p3,p4L,p5L],zone2_right:[p2,p3,p4R,p5R],zone3_left:[p1,p5L],zone3_right:[p2,p5R]});const drawPoly=(points,color)=>{2>points.length||(ctx.beginPath(),ctx.moveTo(points[0].x,points[0].y),points.slice(1).forEach(p=>ctx.lineTo(p.x,p.y)),ctx.closePath(),ctx.fillStyle=color,ctx.fill())};drawPoly([p4L,p5L,{x:0,y:groundLevelY},{x:0,y:p4L.y}],isDark?"rgba(252, 165, 165, 0.15)":"rgba(239, 68, 68, 0.08)");drawPoly([p4R,p5R,{x:cw,y:groundLevelY},{x:cw,y:p4R.y}],isDark?"rgba(252, 165, 165, 0.15)":"rgba(239, 68, 68, 0.08)");drawPoly([p1,p3,p4L],isDark?"rgba(167, 139, 250, 0.2)":"rgba(139, 92, 246, 0.1)");drawPoly([p2,p3,p4R],isDark?"rgba(167, 139, 250, 0.2)":"rgba(139, 92, 246, 0.1)");drawPoly([p1,p2,p3],isDark?"rgba(165, 180, 252, 0.2)":"rgba(79, 70, 229, 0.1)");ctx.strokeStyle=isDark?"#A5B4FC":"#4F46E5";ctx.lineWidth=1.5;[[p1,p3,p2,p1],[p3,p4L],[p4L,p5L],[p3,p4R],[p4R,p5R]].forEach(path=>{ctx.beginPath();ctx.moveTo(path[0].x,path[0].y);path.slice(1).forEach(p=>ctx.lineTo(p.x,p.y));ctx.stroke()});ctx.beginPath();ctx.moveTo(0,groundLevelY);ctx.lineTo(cw,groundLevelY);ctx.strokeStyle=isDark?"#9CA3AF":"#6B7280";ctx.lineWidth=2;ctx.stroke();ctx.fillStyle=isDark?"#6B7280":"#A9A9A9";ctx.fillRect(startX,groundLevelY-10,f_width_scaled,10);.9<p&&(ctx.globalAlpha=(p-.9)/.1,ctx.font="bold 16px Assistant",ctx.fillStyle=isDark?"#E5E7EB":"#1F2937",ctx.textAlign="center",ctx.fillText("I",p3.x,p3.y-10),ctx.fillText("II",(p1.x+p3.x+p4L.x)/3,(p1.y+p3.y+p4L.y)/3),ctx.fillText("II",(p2.x+p3.x+p4R.x)/3,(p2.y+p3.y+p4R.y)/3),ctx.fillText("III",(p4L.x+p5L.x)/2-10,(p4L.y+p5L.y)/2+5),ctx.fillText("III",(p4R.x+p5R.x)/2+10,(p4R.y+p5R.y)/2+5),ctx.globalAlpha=1)}
+            function animateFailureMechanism(){failureAnimationRequest&&cancelAnimationFrame(failureAnimationRequest);let startTime=null;const duration=1500;function animationLoop(timestamp){startTime||(startTime=timestamp);const progress=Math.min((timestamp-startTime)/duration,1);drawFailureMechanism(progress);1>progress&&(failureAnimationRequest=requestAnimationFrame(animationLoop))}failureAnimationRequest=requestAnimationFrame(animationLoop)}
+
+            // --- MAIN TRIGGER & HELPERS ---
+            const getInputs = () => {
+                let c = parseFloat(cPrimeInput.value);
+                let gamma = parseFloat(gammaValInput.value);
+                let gamma_sat = parseFloat(gammaSatValInput.value);
+                if (currentUnitSystem === 'ton') {
+                    c *= KPA_PER_TON;
+                    gamma *= KPA_PER_TON;
+                    gamma_sat *= KPA_PER_TON;
+                }
+                return {
+                    c, phi: parseFloat(phiDegInput.value), gamma,
+                    Df: parseFloat(DfValInput.value), B: parseFloat(BValInput.value),
+                    shape: foundationShapeSelect.value, FS: parseFloat(FSInput.value),
+                    useGWT: gwtCheckbox.checked, Dw: parseFloat(dwValInput.value), gamma_sat,
+                    hf: parseFloat(hfInput.value) / 100, col_b: parseFloat(colBInput.value) / 100, col_l: parseFloat(colLInput.value) / 100
+                };
+            };
+            
+            function triggerCalculationAndAnimation(isDesignResult = false) {
+                const params = getInputs();
+                if (!isDesignResult) { designResultTextDiv.classList.add("hidden"); }
+                assumptionWarningBox.classList.toggle("hidden", !(params.Df > params.B));
+                if (params.Df > params.B) { assumptionWarningBox.textContent = `אזהרה: Df (${params.Df}) > B (${params.B}). היסוד אינו "רדוד" והתוצאות אינן מדויקות.`; }
+                let { q_u, factors, intermediates } = terzaghiBearingCapacity(params);
+                let qall = NaN, p_net_all = NaN, W_foundation = NaN, W_soil = NaN, A_foundation = NaN, P_gross_all = NaN;
+                if (!isNaN(params.FS) && params.FS > 0 && !isNaN(q_u)) { qall = q_u / params.FS; }
+                if (!isNaN(qall)) {
+                    p_net_all = calculateAllowableLoad(params);
+                    if (params.shape !== 'strip') {
+                        const { B, hf, col_b, col_l, Df, gamma } = params;
+                        const gamma_c = 25;
+                        A_foundation = (params.shape === 'square') ? B * B : Math.PI * (B / 2) ** 2;
+                        W_foundation = A_foundation * hf * gamma_c;
+                        const A_column = (params.shape === 'circular') ? Math.PI * (col_b / 2) ** 2 : col_b * col_l;
+                        const soilHeightOverFoundation = Math.max(0, Df - hf);
+                        W_soil = (A_foundation - A_column) * soilHeightOverFoundation * gamma;
+                        P_gross_all = qall * A_foundation;
+                    }
+                }
+                lastCalculationResult = { ...params, qu: q_u, qall, p_net_all, factors, intermediates, W_foundation, W_soil, A_foundation, P_gross_all };
+                animateResults(lastCalculationResult);
+                resultsBox.classList.remove("hidden");
+                drawAllCanvases();
+                updateCostTabDimensions();
+                updateBoq(getInputs());
+                if (currentMode === 'analysis') { updateGraph(); }
+                if (document.getElementById("solution-tab").classList.contains("active")) { populateSolutionTab(lastCalculationResult); }
+            }
+            
+            function animateResults(data) {
+                let { qu, qall, p_net_all, factors, shape } = data;
+                const conversionFactor = currentUnitSystem === 'ton' ? 1/KPA_PER_TON : 1;
+                const pressureUnit = currentUnitSystem === 'kpa' ? 'kPa' : 't/m²';
+                const loadUnit = currentUnitSystem === 'kpa' ? 'kN' : 't';
+                const lineLoadUnit = currentUnitSystem === 'kpa' ? 'kN/m' : 't/m';
+
+                document.querySelectorAll('.result-value').forEach(el => el.classList.remove('visible'));
+                setTimeout(() => {
+                    quOutput.textContent = isNaN(qu) ? "-" : `${(qu * conversionFactor).toFixed(2)} ${pressureUnit}`;
+                    qallOutput.textContent = isNaN(qall) ? "-" : `${(qall * conversionFactor).toFixed(2)} ${pressureUnit}`;
+                    factorsOutput.textContent = (factors && !isNaN(factors.Nc)) ? `Nc=${factors.Nc.toFixed(2)}, Nq=${factors.Nq.toFixed(2)}, Nγ=${factors.N_gamma.toFixed(2)}` : "שגיאה";
+                    
+                    stripLoadResultDiv.classList.toggle('hidden', shape !== 'strip');
+                    netLoadResultDiv.classList.toggle('hidden', shape === 'strip');
+
+                    if (shape === 'strip') {
+                        stripQallOutput.textContent = isNaN(p_net_all) ? "-" : `${(p_net_all * conversionFactor).toFixed(2)} ${lineLoadUnit}`;
+                    } else {
+                        pNetOutput.textContent = isNaN(p_net_all) ? "-" : `${(p_net_all * conversionFactor).toFixed(2)} ${loadUnit}`;
+                    }
+
+                    setTimeout(() => {
+                        document.querySelectorAll('.result-value').forEach(el => el.classList.add('visible'));
+                    }, 50);
+                }, 10);
+            }
+
+            function handleShapeChange(){
+                const shape = foundationShapeSelect.value;
+                const tooltips = {
+                    strip: { label: "עובי קיר (t<sub>w</sub>) [cm]", text: "עובי הקיר הנתמך." },
+                    circular: { label: "קוטר עמוד (d<sub>col</sub>) [cm]", text: "קוטר העמוד העגול." },
+                    square: { label: "רוחב עמוד (b<sub>col</sub>) [cm]", text: "רוחב חתך העמוד." }
+                };
+                colLDiv.classList.toggle('hidden', shape === 'strip' || shape === 'circular');
+                colBLabel.innerHTML = `<span>${tooltips[shape].label}</span>`;
+                drawAllCanvases(true);
+                updateCostTabDimensions();
+            }
+
+            function updateGraph() {
+                if (!graphContainer) return;
+                graphContainer.classList.remove('hidden');
+                const currentParams = getInputs();
+                const labels = [];
+                const data = [];
+                const conversionFactor = currentUnitSystem === 'ton' ? 1/KPA_PER_TON : 1;
+                const pressureUnit = currentUnitSystem === 'kpa' ? 'kPa' : 't/m²';
+                for (let b = 0.5; b <= 5; b += 0.25) {
+                    labels.push(b.toFixed(2));
+                    let paramsForGraph = { ...currentParams, B: b };
+                    let { q_u } = terzaghiBearingCapacity(paramsForGraph);
+                    let q_all = isNaN(q_u) || currentParams.FS <= 0 ? 0 : q_u / currentParams.FS;
+                    data.push(q_all * conversionFactor);
+                }
+                const isDark = document.documentElement.classList.contains('dark');
+                const chartConfig = {
+                    type: 'line',
+                    data: { labels, datasets: [{ label: `תסבולת מותרת (${pressureUnit})`, data, borderColor: '#4F46E5', backgroundColor: 'rgba(79, 70, 229, 0.1)', fill: true, tension: 0.1 }] },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            tooltip: { enabled: true, titleFont: { family: 'Assistant' }, bodyFont: { family: 'Assistant' }, callbacks: { label: (context) => `${context.dataset.label || ''}: ${context.parsed.y.toFixed(2)} ${pressureUnit}` } },
+                            legend: { labels: { color: isDark ? '#E5E7EB' : '#1F2937', font: { family: 'Assistant' } } }
+                        },
+                        scales: {
+                            x: { title: { display: true, text: `רוחב יסוד B (m)`, color: isDark ? '#9CA3AF' : '#4B5563', font: { family: 'Assistant', size: 14 } }, ticks: { color: isDark ? '#9CA3AF' : '#4B5563' }, grid: { color: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' } },
+                            y: { title: { display: true, text: `תסבולת מותרת q_all (${pressureUnit})`, color: isDark ? '#9CA3AF' : '#4B5563', font: { family: 'Assistant', size: 14 } }, ticks: { color: isDark ? '#9CA3AF' : '#4B5563' }, grid: { color: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' } }
+                        }
+                    }
+                };
+                if (bearingChart) { bearingChart.options = chartConfig.options; bearingChart.data = chartConfig.data; bearingChart.update(); } 
+                else { bearingChart = new Chart(bearingCapacityChartCanvas, chartConfig); }
+            }
+
+            function populateSolutionTab(data) {
+                if (!data || Object.keys(data).length === 0 || isNaN(data.qu)) {
+                    solutionContainer.innerHTML = `<div class="text-center p-8 text-gray-500"><p>בצע חישוב להצגת מהלך הפתרון.</p></div>`;
+                    return;
+                }
+                const { c, phi, gamma, FS, qu, qall, p_net_all, factors, intermediates, useGWT, gamma_sat, shape, hf, A_foundation, W_foundation, W_soil, Df, B, Dw, P_gross_all } = data;
+                const cf = currentUnitSystem === 'ton' ? 1/KPA_PER_TON : 1;
+                const pUnit = currentUnitSystem === 'kpa' ? 'kPa' : 't/m²';
+                const dUnit = currentUnitSystem === 'kpa' ? 'kN/m³' : 't/m³';
+                const lUnit = currentUnitSystem === 'kpa' ? 'kN' : 't';
+                const llUnit = currentUnitSystem === 'kpa' ? 'kN/m' : 't/m';
+
+                const generateLegend = (vars) => {
+                    const varMap = {
+                        "q<sub>ult</sub>": "תסבולת הרס אולטימטיבית [kPa]", "c'": "קוהזיה אפקטיבית של הקרקע [kPa]",
+                        "N<sub>c</sub>...": "מקדמי תסבולת (תלויי φ', חסרי ממד)", "s<sub>c</sub>...": "מקדמי צורה (תלויי צורת יסוד, חסרי ממד)",
+                        "q'": "מאמץ אפקטיבי של העומס העליון בעומק הביסוס (σ'<sub>vo</sub>) [kPa]", "γ'": "משקל מרחבי אפקטיבי של הקרקע מתחת ליסוד [kN/m³]",
+                        "B": "רוחב היסוד (המידה הקטנה) [m]", "q<sub>all</sub>": "תסבולת מותרת [kPa]",
+                        "FS": "מקדם בטיחות (חסר ממד)", "φ'": "זווית חיכוך פנימית אפקטיבית [מעלות]", "D<sub>f</sub>": "עומק ביסוס [m]",
+                        "D<sub>w</sub>": "עומק מפלס מי תהום [m]", "γ": "משקל מרחבי כולל של הקרקע [kN/m³]",
+                        "γ<sub>sat</sub>": "משקל מרחבי רווי של הקרקע [kN/m³]", "γ<sub>sub</sub>": "משקל מרחבי שקוע (בציפה) של הקרקע [kN/m³]",
+                        "z": "עומק אזור ההשפעה של הכשל מתחת לבסיס היסוד [m]"
+                    };
+                    let html = `<details class="legend-details"><summary class="font-semibold">מקרא נוסחה</summary><ul class="legend-content list-disc pr-5 space-y-1 mt-2">`;
+                    vars.forEach(v => { if(varMap[v]) html += `<li><span dir="ltr" class="font-mono">${v}</span>: ${varMap[v]}</li>`; });
+                    html += `</ul></details>`;
+                    return html;
+                };
+                
+                let html = ``;
+                html += `<div class="solution-step"><h3 class="solution-step-title">שלב 1: נתוני הבעיה</h3><p>c' = ${(c*cf).toFixed(2)} ${pUnit}, φ' = ${phi}°</p><p>γ = ${(gamma*cf).toFixed(2)} ${dUnit}, Df = ${Df.toFixed(2)} m, B = ${B.toFixed(2)} m</p><p>צורת יסוד: ${shape}, FS = ${FS}</p>`;
+                if (useGWT) { html += `<p>התחשבות במי תהום: כן, Dw = ${Dw.toFixed(2)} m, γ<sub>sat</sub> = ${(gamma_sat*cf).toFixed(2)} ${dUnit}</p>`; } else {html += `<p>התחשבות במי תהום: לא</p>`}
+                html += `</div>`;
+
+                html += `<div class="solution-step"><h3 class="solution-step-title">שלב 2: חישוב מקדמי תסבולת (N<sub>c</sub>, N<sub>q</sub>, N<sub>γ</sub>)</h3>`;
+                if (factors.interpolated) {
+                    html += `<p>עבור φ' = ${phi}°, שאינו ערך שלם בטבלה, נבצע אינטרפולציה לינארית בין φ=${factors.phi_0}° לבין φ=${factors.phi_1}°.<sup>*</sup></p>`;
+                    html += `<div class="formula-box"><code class="formula">N<sub>c</sub> = ${factors.f_0.Nc.toFixed(1)} + (${phi}-${factors.phi_0})/(${factors.phi_1}-${factors.phi_0}) * (${factors.f_1.Nc.toFixed(1)} - ${factors.f_0.Nc.toFixed(1)}) = ${factors.Nc.toFixed(2)}</code></div>`;
+                    html += `<div class="formula-box"><code class="formula">N<sub>q</sub> = ${factors.f_0.Nq.toFixed(1)} + (${phi}-${factors.phi_0})/(${factors.phi_1}-${factors.phi_0}) * (${factors.f_1.Nq.toFixed(1)} - ${factors.f_0.Nq.toFixed(1)}) = ${factors.Nq.toFixed(2)}</code></div>`;
+                    html += `<div class="formula-box"><code class="formula">N<sub>γ</sub> = ${factors.f_0.N_gamma.toFixed(1)} + (${phi}-${factors.phi_0})/(${factors.phi_1}-${factors.phi_0}) * (${factors.f_1.N_gamma.toFixed(1)} - ${factors.f_0.N_gamma.toFixed(1)}) = ${factors.N_gamma.toFixed(2)}</code></div>`;
+                    html += `<p class="text-xs text-gray-500 mt-2"><sup>*</sup>הערה: אינטרפולציה לינארית מקובלת למטרות לימוד. בפרקטיקה, עדיף להשתמש בנוסחאות המקוריות או בתוכנה ייעודית לדיוק מרבי.</p>`
+                } else {
+                    html += `<p>עבור φ' = ${phi}°, המקדמים מטבלת טרצגי הם:</p><div class="step-result">N<sub>c</sub> = ${factors.Nc.toFixed(2)}, N<sub>q</sub> = ${factors.Nq.toFixed(2)}, N<sub>γ</sub> = ${factors.N_gamma.toFixed(2)}</div>`;
+                }
+                html += `</div>`;
+
+                html += `<div class="solution-step"><h3 class="solution-step-title">שלב 3: ניתוח השפעת מי תהום (GWT)</h3>`;
+                let gwtCaseDesc = "", q_eff_formula = "", gamma_eff_formula = "";
+                const gamma_sub = gamma_sat - 9.81;
+                
+                if (intermediates.gwtCase === 1) { gwtCaseDesc = `מקרה 1: מי התהום עמוקים (D<sub>w</sub> ≥ D<sub>f</sub> + B). אין השפעה.`; q_eff_formula = `q' = γ·D<sub>f</sub> = ${gamma.toFixed(2)} · ${Df} = ${intermediates.q_eff.toFixed(2)} kPa`; gamma_eff_formula = `γ' = γ = ${gamma.toFixed(2)} kN/m³`;
+                } else if (intermediates.gwtCase === 2.1) { gwtCaseDesc = "מקרה 2.1: מי התהום מעל פני הקרקע (D<sub>w</sub> ≤ 0)"; q_eff_formula = `q' = γ'·D<sub>f</sub> = ${(gamma_sub).toFixed(2)} · ${Df} = ${intermediates.q_eff.toFixed(2)} kPa`; gamma_eff_formula = `γ' = γ<sub>sub</sub> = ${(gamma_sub).toFixed(2)} kN/m³`;
+                } else if (intermediates.gwtCase === 2.2) { gwtCaseDesc = "מקרה 2.2: מי התהום בין פני הקרקע לבסיס היסוד (0 < D<sub>w</sub> < D<sub>f</sub>)"; q_eff_formula = `q' = γ·D<sub>w</sub> + γ'·(D<sub>f</sub>-D<sub>w</sub>) = (${gamma.toFixed(2)}·${Dw}) + (${(gamma_sub).toFixed(2)}·(${Df}-${Dw})) = ${intermediates.q_eff.toFixed(2)} kPa`; gamma_eff_formula = `γ' = γ<sub>sub</sub> = ${(gamma_sub).toFixed(2)} kN/m³`;
+                } else { gwtCaseDesc = `מקרה 3: מי התהום מתחת לבסיס היסוד, בתוך אזור הכשל (D<sub>f</sub> < D<sub>w</sub> < D<sub>f</sub>+B)`; q_eff_formula = `q' = γ·D<sub>f</sub> = ${gamma.toFixed(2)} · ${Df} = ${intermediates.q_eff.toFixed(2)} kPa`; gamma_eff_formula = `γ' ≈ γ<sub>sub</sub> + ((D<sub>w</sub>-D<sub>f</sub>)/B) · (γ - γ<sub>sub</sub>) = ${(gamma_sub).toFixed(2)} + ((${Dw}-${Df})/${B}) · (${gamma.toFixed(2)}-${(gamma_sub).toFixed(2)}) = ${intermediates.gamma_eff.toFixed(2)} kN/m³`;
+                }
+                html += `<p><b>ניתוח המקרה:</b> ${gwtCaseDesc}</p>`;
+                html += `<p class="mt-4">חישוב מאמץ אפקטיבי בעומס העליון:</p><div class="formula-box"><code class="formula">${q_eff_formula}</code></div>`;
+                html += `<p class="mt-4">חישוב משקל מרחבי אפקטיבי לאיבר השלישי:</p><div class="formula-box"><code class="formula">${gamma_eff_formula}</code></div>`;
+                html += generateLegend(["q'", "γ'", "D<sub>f</sub>", "D<sub>w</sub>", "B", "γ", "γ<sub>sat</sub>", "γ<sub>sub</sub>"]);
+                html += `</div>`;
+                
+                html += `<div class="solution-step"><h3 class="solution-step-title">שלב 4: חישוב תסבולת הרס (q<sub>ult</sub>)</h3><p>נציב את כל הרכיבים במשוואת טרצגי הכללית:</p>
+                        <div class="formula-box"><code class="formula">q<sub>ult</sub> = (c'·N<sub>c</sub>·s<sub>c</sub>) + (q'·N<sub>q</sub>·s<sub>q</sub>) + (0.5·γ'·B·N<sub>γ</sub>·s<sub>γ</sub>)</code></div>
+                        ${generateLegend(["q<sub>ult</sub>", "c'", "N<sub>c</sub>...", "s<sub>c</sub>...", "q'", "γ'", "B"])}
+                        <p class="mt-4"><b>פירוט תרומת האיברים (ביחידות kPa):</b></p>
+                        <p>תרומת הקוהזיה: <span dir="ltr">${c.toFixed(2)} · ${factors.Nc.toFixed(2)} · ${intermediates.s_c.toFixed(1)} = <b>${intermediates.term1.toFixed(2)} kPa</b></span></p>
+                        <p>תרומת העומס העליון: <span dir="ltr">${intermediates.q_eff.toFixed(2)} · ${factors.Nq.toFixed(2)} · ${intermediates.s_q.toFixed(1)} = <b>${intermediates.term2.toFixed(2)} kPa</b></span></p>
+                        <p>תרומת המשקל העצמי: <span dir="ltr">0.5 · ${intermediates.gamma_eff.toFixed(2)} · ${B} · ${factors.N_gamma.toFixed(2)} · ${intermediates.s_gamma.toFixed(1)} = <b>${intermediates.term3.toFixed(2)} kPa</b></span></p>
+                        <p class="mt-2"><b>סך הכל:</b></p>
+                        <div class="formula-box"><code class="formula">q<sub>ult</sub> = ${intermediates.term1.toFixed(2)} + ${intermediates.term2.toFixed(2)} + ${intermediates.term3.toFixed(2)}</code></div>
+                        <div class="step-result">q<sub>ult</sub> = ${(qu*cf).toFixed(2)} ${pUnit}</div></div>`;
+                
+                html += `<div class="solution-step"><h3 class="solution-step-title">שלב 5: חישוב תסבולת ועומס מותרים</h3>
+                        <p>תחילה, נחשב את תסבולת הקרקע המותרת (q<sub>all</sub>):</p>
+                        <div class="formula-box"><code class="formula">q<sub>all</sub> = q<sub>ult</sub> / FS  = ${(qu*cf).toFixed(2)} / ${FS} = ${(qall*cf).toFixed(2)} ${pUnit}</code></div>
+                        ${generateLegend(["q<sub>all</sub>", "q<sub>ult</sub>", "FS"])}`;
+                if (shape !== 'strip') {
+                    html += `<p class="mt-4">כעת, נחשב את העומס הנקי המותר על האלמנט (P<sub>net,all</sub>):</p>
+                            <div class="formula-box"><code class="formula">1. P<sub>gross,all</sub> = q<sub>all</sub> · A = ${(qall*cf).toFixed(2)} · ${A_foundation.toFixed(2)} = ${P_gross_all ? (P_gross_all*cf).toFixed(2) : '-'} ${lUnit}</code></div>
+                            <div class="formula-box"><code class="formula">2. W<sub>foundation</sub> = A · h<sub>f</sub> · γ<sub>c</sub> = ${A_foundation.toFixed(2)} · ${hf} · 25 = ${W_foundation ? (W_foundation*cf).toFixed(2) : '-'} ${lUnit}</code></div>
+                            <div class="formula-box"><code class="formula">3. W<sub>soil</sub> = (A - A<sub>col</sub>)·(D<sub>f</sub>-h<sub>f</sub>)·γ = (${A_foundation.toFixed(2)} - ${(colBInput.value/100*colLInput.value/100).toFixed(2)})·(${Df}-${hf})·${gamma.toFixed(2)} = ${W_soil ? (W_soil*cf).toFixed(2) : '-'} ${lUnit}</code></div>
+                            <div class="formula-box"><code class="formula">4. P<sub>net,all</sub> = P<sub>gross,all</sub> - W<sub>foundation</sub> - W<sub>soil</sub></code></div>
+                             <div class="step-result">P<sub>net,all</sub> = ${(p_net_all*cf).toFixed(2)} ${lUnit}</div>`;
+                } else {
+                    html += `<p class="mt-4">עבור יסוד נמשך, העומס המותר למטר אורך הוא:</p><div class="formula-box"><code class="formula">Q<sub>all</sub> = q<sub>net,all</sub> * B = ${(p_net_all*cf).toFixed(2)} ${llUnit}</code></div><p class="text-xs text-gray-500">(החישוב כולל הפחתת משקל עצמי של היסוד והקרקע שעליו)</p>`;
+                }
+                html += `</div>`;
+
+                solutionContainer.innerHTML = html;
+            }
+
+            // --- INITIALIZATION ---
+            function init() {
+                loadAccountFromStorage();
+                const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                applyTheme(savedTheme);
+                const savedUnitSystem = localStorage.getItem('unitSystem') || 'kpa';
+                applyUnitSystem(savedUnitSystem);
+                handleShapeChange();
+                triggerCalculationAndAnimation(); // Initial calculation on load
+                updateAllTabs();
+
+                // --- EVENT LISTENERS ---
+                themeToggleButton.addEventListener('click', () => { const isDark = document.documentElement.classList.toggle('dark'); const newTheme = isDark ? 'dark' : 'light'; localStorage.setItem('theme', newTheme); applyTheme(newTheme); });
+                learnModeCheckbox.addEventListener('change', () => { mainBody.classList.toggle('learn-mode-active', learnModeCheckbox.checked); });
+                unitToggleButton.addEventListener('click', () => {
+                    const newSystem = currentUnitSystem === 'kpa' ? 'ton' : 'kpa';
+                    const inputsToConvert = [cPrimeInput, gammaValInput, gammaSatValInput, requiredLoadInput];
+                    if (newSystem === 'ton') {
+                        inputsToConvert.forEach(input => {
+                            const val = parseFloat(input.value);
+                            if (!isNaN(val)) input.value = (val / KPA_PER_TON).toFixed(2);
+                        });
+                    } else { // ton to kpa
+                        inputsToConvert.forEach(input => {
+                            const val = parseFloat(input.value);
+                            if (!isNaN(val)) input.value = (val * KPA_PER_TON).toFixed(2);
+                        });
+                    }
+                    localStorage.setItem('unitSystem', newSystem);
+                    applyUnitSystem(newSystem);
+                    if (currentMode === 'analysis') triggerCalculationAndAnimation();
+                });
+                tabs.forEach(tab => { 
+                    tab.addEventListener('click', () => { 
+                        const target = tab.dataset.tab; 
+                        tabs.forEach(t => t.classList.remove('active')); 
+                        tab.classList.add('active'); 
+                        tabContents.forEach(content => content.classList.toggle('active', content.id === target)); 
+                        if (target === 'cost-estimation-tab') { updateCostTabDimensions(); updateBoq(getInputs()); } 
+                        if (target === 'final-account-tab') renderFinalAccount();
+                        if (target === 'solution-tab') populateSolutionTab(lastCalculationResult); 
+                        if (target === 'quantities-summary-tab') renderQuantitiesSummary();
+                        if (target === 'gantt-chart-tab') renderGanttChart();
+                    }); 
+                });
+                
+                // --- FIX: Main calculation button logic updated ---
+                calculateButton.addEventListener('click', () => {
+                    if (currentMode === 'analysis') {
+                        triggerCalculationAndAnimation();
+                    } else {
+                        performDesignCalculation();
+                    }
+                });
+
+                // --- FIX: Connect mode switcher buttons ---
+                calcModeBtn.addEventListener('click', () => switchMode('analysis'));
+                designModeBtn.addEventListener('click', () => switchMode('design'));
+                
+                gwtCheckbox.addEventListener('change', () => { gwtInputsDiv.classList.toggle('hidden', !gwtCheckbox.checked); if (currentMode === 'analysis') triggerCalculationAndAnimation(); });
+                
+                const analysisInputs = [DfValInput, BValInput, cPrimeInput, phiDegInput, gammaValInput, dwValInput, gammaSatValInput, hfInput, colBInput, colLInput, FSInput, foundationShapeSelect];
+                analysisInputs.forEach(i => i.addEventListener('input', () => { if (currentMode === 'analysis') triggerCalculationAndAnimation() }));
+                
+                [boqExcavationPrice, boqConcretePrice, boqFormworkPrice, boqSteelPrice, steelRatioInput, steelTotalWeightInput, stripLengthInput, document.getElementById('steel-dia-x'), document.getElementById('steel-spacing-x'), document.getElementById('steel-dia-y'), document.getElementById('steel-spacing-y')].forEach(input => input.addEventListener('input', () => updateBoq(getInputs())));
+                finalAccountTableBody.addEventListener('click', (e) => { const headerRow = e.target.closest('.group-header-row'); if (headerRow) { const groupId = headerRow.dataset.groupId; const componentRows = finalAccountTableBody.querySelectorAll(`.component-row[data-parent-group-id="${groupId}"]`); headerRow.classList.toggle('open'); const isOpen = headerRow.classList.contains('open'); componentRows.forEach(row => row.style.display = isOpen ? 'table-row' : 'none'); } const button = e.target.closest('.qty-btn'); if (!button) return; const action = button.dataset.action; const id = button.dataset.id; const groupIndex = finalAccountGroups.findIndex(g => g.id === id); if (groupIndex === -1) return; switch(action) { case 'increase': finalAccountGroups[groupIndex].groupQuantity++; break; case 'decrease': finalAccountGroups[groupIndex].groupQuantity = Math.max(0, finalAccountGroups[groupIndex].groupQuantity - 1); if (finalAccountGroups[groupIndex].groupQuantity === 0) finalAccountGroups.splice(groupIndex, 1); break; case 'delete': showConfirmationModal(`האם למחוק את כל פריטי "${finalAccountGroups[groupIndex].name} ${finalAccountGroups[groupIndex].index||''}"?`, (confirmed) => { if(confirmed) { finalAccountGroups.splice(groupIndex, 1); saveAccountToStorage(); updateAllTabs(); } }); break; } saveAccountToStorage(); updateAllTabs(); });
+                clearAccountButton.addEventListener('click', () => { showConfirmationModal('האם אתה בטוח שברצונך למחוק את כל החשבון?', (confirmed) => { if (confirmed) { finalAccountGroups = []; saveAccountToStorage(); updateAllTabs(); } }); });
+                steelCalcMethodRadios.forEach(radio => radio.addEventListener('change', () => { const method = radio.value; steelRatioInputs.classList.toggle('hidden', method !== 'ratio'); steelDetailedInputs.classList.toggle('hidden', method !== 'detailed'); steelTotalInputs.classList.toggle('hidden', method !== 'total'); updateBoq(getInputs()); }));
+                addToAccountButton.addEventListener('click', () => { const name = foundationNameInput.value.trim(); const index = foundationIndexInput.value.trim(); if (!name || !index || !currentBoq.length) { alert("אנא בצע חישוב הנדסי תחילה"); return; } const category = "יסוד-ביסוס"; const duration = parseInt(foundationDurationInput.value) || 1; const shape = foundationShapeSelect.value; const B = parseFloat(BValInput.value) || 0; const hf = parseFloat(hfInput.value) / 100 || 0; const stripLength = (shape === 'strip') ? (parseFloat(document.getElementById('strip-foundation-length').value) || 1.0) : 1.0; let descriptionDetails = ''; if (shape === 'square') { descriptionDetails = `(${B.toFixed(2)}x${B.toFixed(2)} מ', עובי ${hf.toFixed(2)} מ')`; } else if (shape === 'circular') { descriptionDetails = `(קוטר ${B.toFixed(2)} מ', עובי ${hf.toFixed(2)} מ')`; } else if (shape === 'strip') { descriptionDetails = `(רוחב ${B.toFixed(2)} מ', אורך ${stripLength.toFixed(2)} מ', עובי ${hf.toFixed(2)} מ')`; } const unitCost = currentBoq.reduce((sum, item) => sum + (item.qty * item.price), 0); const newGroup = { id: `foundation_${Date.now()}`, type: 'foundation', name, index, category, duration, version: 1, groupQuantity: 1, unitCost, descriptionDetails, components: JSON.parse(JSON.stringify(currentBoq)) }; finalAccountGroups.push(newGroup); saveAccountToStorage(); updateAllTabs(); });
+                addCustomItemButton.addEventListener('click', () => { const desc = customItemDesc.value.trim(); const qty = parseFloat(customItemQty.value); const unit = customItemUnit.value.trim(); const price = parseFloat(customItemPrice.value); const category = customItemCategorySelect.value; const duration = parseInt(customItemDurationInput.value) || 1; if (!desc || isNaN(qty) || !unit || isNaN(price) || qty <= 0 || price < 0) { alert("אנא מלא את כל השדות."); return;} const customItem = { id: `custom_${Date.now()}`, type: 'other', name: desc, category, duration, groupQuantity: qty, unit, unitCost: price }; finalAccountGroups.push(customItem); saveAccountToStorage(); updateAllTabs(); customItemDesc.value = ''; customItemQty.value = '1'; customItemUnit.value = 'קומפלט'; customItemPrice.value = ''; });
+                [unforeseenPercentInput, overheadPercentInput, retentionPercentInput, vatPercentInput].forEach(input => input.addEventListener('input', calculateFinalTotals));
+                [planCanvas, sectionCanvas].forEach(canvas => canvas.addEventListener('click', function() { openImageInModal(this); }));
+                failureMechanismCanvas.addEventListener('click', (e) => {
+                    if (!learnModeCheckbox.checked) { openImageInModal(failureMechanismCanvas); return; }
+                    const rect = failureMechanismCanvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const point = { x, y };
+                    const isPointInPolygon = (point, polygon) => { let inside = false; for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) { const xi = polygon[i].x, yi = polygon[i].y; const xj = polygon[j].x, yj = polygon[j].y; const intersect = ((yi > point.y) !== (yj > point.y)) && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi); if (intersect) inside = !inside; } return inside; };
+                    if (failureZonePolygons.zone1 && isPointInPolygon(point, failureZonePolygons.zone1)) { showLearnModal('failure_zone1'); return; }
+                    if (failureZonePolygons.zone2_left && isPointInPolygon(point, failureZonePolygons.zone2_left)) { showLearnModal('failure_zone2'); return; }
+                    if (failureZonePolygons.zone2_right && isPointInPolygon(point, failureZonePolygons.zone2_right)) { showLearnModal('failure_zone2'); return; }
+                });
+                imageModalCloseBtn.addEventListener('click', () => imageModal.classList.remove('visible'));
+                imageModal.addEventListener('click', (e) => { if(e.target === imageModal) { imageModal.classList.remove('visible'); } });
+                formulaSheetBtn.addEventListener('click', () => formulaSheetModal.classList.add('visible'));
+                formulaModalCloseBtn.addEventListener('click', () => formulaSheetModal.classList.remove('visible'));
+                formulaSheetModal.addEventListener('click', (e) => { if (e.target === formulaSheetModal) formulaSheetModal.classList.remove('visible'); });
+                learnModalClose.addEventListener('click', () => learnModal.classList.remove('visible'));
+                learnModal.addEventListener('click', (e) => { if (e.target === learnModal) learnModal.classList.remove('visible'); });
+                document.querySelector('main').addEventListener('click', (e) => {
+                    const label = e.target.closest('.input-label, .section-title');
+                    if (learnModeCheckbox.checked && label && label.dataset.learnKey) {
+                        e.preventDefault();
+                        showLearnModal(label.dataset.learnKey);
+                    }
+                });
+                loadSoilBtn.addEventListener('click', () => {
+                    const selectedSoil = soilLibrarySelect.value;
+                    if(selectedSoil === 'custom') return;
+                    const props = soilLibrary[selectedSoil];
+                    let c = props.c;
+                    let gamma = props.gamma;
+                    if (currentUnitSystem === 'ton') {
+                        c /= KPA_PER_TON;
+                        gamma /= KPA_PER_TON;
+                    }
+                    cPrimeInput.value = c.toFixed(2);
+                    phiDegInput.value = props.phi;
+                    gammaValInput.value = gamma.toFixed(2);
+                    if (currentMode === 'analysis') triggerCalculationAndAnimation();
+                });
+            }
+            
+            init();
+        });
+    </script>
+</body>
+</html>

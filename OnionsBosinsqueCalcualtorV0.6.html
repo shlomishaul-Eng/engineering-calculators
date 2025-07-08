@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מחשבון מאמצים בקרקע - בוסינסק</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --surface-color: #ffffff;
+            --text-color: #050505;
+            --primary-color: #0866ff;
+            --secondary-text: #65676b;
+            --border-color: #ccd0d5;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #18191a;
+            --surface-color: #242526;
+            --text-color: #e4e6eb;
+            --primary-color: #2d88ff;
+            --secondary-text: #b0b3b8;
+            --border-color: #3e4042;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 25px;
+            max-width: 1400px;
+            margin: auto;
+        }
+
+        .controls-panel, .visualization-panel {
+            background-color: var(--surface-color);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 12px var(--shadow-color);
+            border: 1px solid var(--border-color);
+            transition: background-color 0.3s, border-color 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #canvas-container {
+            flex-grow: 1;
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        canvas { display: block; width: 100%; height: 100%; }
+
+        header { text-align: center; margin-bottom: 15px; }
+        header h1 { font-size: 28px; margin: 0; color: var(--primary-color); }
+        header h2 { font-size: 18px; font-weight: 400; margin: 5px 0 15px; color: var(--secondary-text); }
+        
+        .header-buttons { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        .header-btn {
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary-color);
+            background-color: transparent;
+            border: 1px solid var(--primary-color);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .header-btn:hover { background-color: var(--primary-color); color: #fff; }
+
+        .input-group { position: relative; margin-bottom: 20px; }
+        .input-group label { display: block; font-weight: 600; margin-bottom: 8px; }
+        .input-group input, .input-group select {
+            width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px;
+            background-color: var(--bg-color); color: var(--text-color); font-size: 16px;
+            box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .input-group input:focus, .input-group select:focus {
+            outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 2px rgba(8, 102, 255, 0.2);
+        }
+        
+        .info-icon {
+            position: absolute; left: 10px; top: 42px; cursor: pointer; color: var(--secondary-text);
+            font-style: normal; font-weight: bold; width: 20px; height: 20px; text-align: center;
+            line-height: 20px; border-radius: 50%; border: 1px solid var(--border-color);
+        }
+        
+        .tooltip {
+            visibility: hidden; width: 220px; background-color: #333; color: #fff; text-align: center;
+            border-radius: 6px; padding: 10px; position: absolute; z-index: 10; bottom: 125%;
+            left: 50%; margin-left: -110px; opacity: 0; transition: opacity 0.3s;
+        }
+        .info-icon:hover .tooltip { visibility: visible; opacity: 1; }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .calc-btn, .reset-btn {
+            width: 100%; padding: 15px; font-size: 18px; font-weight: 600; color: #fff;
+            border: none; border-radius: 6px; cursor: pointer;
+            transition: filter 0.2s, transform 0.1s;
+        }
+        .calc-btn { background-color: var(--primary-color); }
+        .reset-btn { background-color: var(--secondary-text); }
+        .calc-btn:hover, .reset-btn:hover { filter: brightness(1.1); }
+        .calc-btn:active, .reset-btn:active { transform: scale(0.98); }
+
+        .accordion { margin-top: 25px; }
+        .accordion-item { border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 10px; overflow: hidden; }
+        .accordion-header {
+            background-color: var(--bg-color); padding: 15px; cursor: pointer; font-weight: 600;
+            display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s;
+        }
+        .accordion-header:hover { filter: brightness(0.95); }
+        .accordion-header::after { content: '+'; font-size: 20px; transition: transform 0.3s; }
+        .accordion-item.active .accordion-header::after { transform: rotate(45deg); }
+        .accordion-content { max-height: 0; overflow: auto; padding: 0 15px; transition: max-height 0.5s ease-out, padding 0.5s ease-out; }
+        .accordion-item.active .accordion-content { max-height: 500px; padding: 15px; }
+        
+        #final-result {
+            margin-top: 20px; padding: 15px; background-color: var(--bg-color);
+            border: 1px solid var(--border-color); border-radius: 6px; text-align: center; 
+        }
+        #result-summary { font-size: 14px; color: var(--secondary-text); margin-bottom: 10px; }
+        #result-value { font-size: 20px; font-weight: bold; color: var(--primary-color); }
+        
+        #viz-title { text-align: center; font-size: 18px; font-weight: 600; margin-bottom: 15px; color: var(--primary-color); }
+
+        .theme-switcher { position: absolute; top: 20px; left: 20px; z-index: 10; }
+        .theme-switcher button {
+            background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 50%;
+            width: 40px; height: 40px; cursor: pointer; color: var(--text-color); font-size: 20px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        
+        footer {
+            text-align: center; padding: 20px; margin-top: 25px; color: var(--secondary-text);
+            grid-column: 1 / -1; border-top: 1px solid var(--border-color); background-color: var(--surface-color);
+            border-radius: 12px;
+        }
+        footer p { margin: 5px 0; }
+
+        .modal {
+            display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%;
+            overflow: auto; background-color: rgba(0,0,0,0.6);
+            align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background-color: var(--surface-color); margin: auto; padding: 30px;
+            border: 1px solid var(--border-color); width: 80%; max-width: 700px; border-radius: 12px;
+            position: relative;
+        }
+        .modal-content h3 { margin-top: 0; color: var(--primary-color); }
+        .modal-content ul { padding-right: 20px; }
+        .close-btn {
+            color: var(--secondary-text); position: absolute; left: 25px; top: 15px;
+            font-size: 28px; font-weight: bold; cursor: pointer;
+        }
+        .close-btn:hover { color: var(--text-color); }
+        
+        .chart-gallery img { width: 48%; margin: 1%; cursor: pointer; border: 1px solid var(--border-color); border-radius: 6px; }
+        #image-modal img { width: 100%; height: auto; }
+
+        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <div class="theme-switcher">
+        <button id="theme-toggle">🌙</button>
+    </div>
+
+    <div class="container">
+        <div class="controls-panel">
+            <header>
+                <h1>מחשבון בוסינסק</h1>
+                <h2>מרצה: שלומי שאול</h2>
+                <div class="header-buttons">
+                    <button class="header-btn" onclick="document.getElementById('assumptions-modal').style.display = 'flex'">הנחות יסוד</button>
+                    <button class="header-btn" id="export-pdf-btn">ייצוא ל-PDF</button>
+                </div>
+            </header>
+
+            <div class="input-group">
+                <label for="foundationType">סוג היסוד</label>
+                <select id="foundationType">
+                    <option value="circular">יסוד עגול</option>
+                    <option value="square">יסוד ריבועי</option>
+                    <option value="strip">יסוד עובר (רצועה)</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="loadQ">עומס אחיד (q) [kN/m²]</label>
+                <span class="info-icon">i<span class="tooltip">העומס המפורס באופן אחיד על פני שטח היסוד.</span></span>
+                <input type="number" id="loadQ" value="100">
+            </div>
+            
+            <div class="input-group">
+                <label for="depthZ">עומק אנכי (z) [m]</label>
+                 <span class="info-icon">i<span class="tooltip">המרחק האנכי מפני השטח של הפעלת העומס עד לנקודה הנבדקת.</span></span>
+                <input type="number" id="depthZ" value="5">
+            </div>
+
+            <div id="circular-inputs">
+                <div class="input-group"><label for="radiusR">רדיוס היסוד (R₀) [m]</label><span class="info-icon">i<span class="tooltip">הרדיוס של היסוד העגול.</span></span><input type="number" id="radiusR" value="2.5"></div>
+                <div class="input-group"><label for="radialDist">מרחק רדיאלי (r) [m]</label><span class="info-icon">i<span class="tooltip">המרחק האופקי ממרכז היסוד העגול.</span></span><input type="number" id="radialDist" value="1"></div>
+            </div>
+
+            <div id="rect-inputs" style="display: none;">
+                <div class="input-group"><label for="widthB">רוחב היסוד (B) [m]</label><span class="info-icon">i<span class="tooltip">הרוחב הכולל של היסוד.</span></span><input type="number" id="widthB" value="4"></div>
+                <div class="input-group"><label for="horizontalDist">מרחק אופקי מהמרכז (x) [m]</label><span class="info-icon">i<span class="tooltip">המרחק האופקי ממרכז היסוד.</span></span><input type="number" id="horizontalDist" value="1"></div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="reset-btn" id="reset-btn">איפוס</button>
+                <button class="calc-btn" onclick="calculate()">חשב ושרטט</button>
+            </div>
+
+            <div id="final-result" style="display: none;">
+                <div id="result-summary"></div>
+                <div id="result-value"></div>
+            </div>
+            
+            <div class="accordion">
+                <div class="accordion-item"><div class="accordion-header">מהלך הפתרון</div><div class="accordion-content" id="solution-steps"></div></div>
+                <div class="accordion-item"><div class="accordion-header">מידע על גרפי בוסינסק</div><div class="accordion-content">
+                    <p>התרשימים הגרפיים הם פתרון ויזואלי לאינטגרציה של נוסחת העומס הנקודתי על פני שטחי העמסה. הם מאפשרים למצוא "מקדם השפעה" (I) על בסיס פרמטרים גיאומטריים מנורמלים. לחץ על תמונה להגדלה.</p>
+                    <div class="chart-gallery">
+                        <img src="https://i.postimg.cc/XvRT4VfX/צילום_מסך_2025-06-17_174346.png" alt="תרשים בוסינסק ליסוד עגול" onclick="showImageModal(this.src)">
+                        <img src="https://i.postimg.cc/TPLZzyWZ/צילום_מסך_2025-06-17_174332.png" alt="תרשים בוסינסק ליסוד ריבועי ועובר" onclick="showImageModal(this.src)">
+                    </div>
+                </div></div>
+            </div>
+        </div>
+        <div class="visualization-panel">
+            <div id="viz-title"></div>
+            <div id="canvas-container"></div>
+        </div>
+    </div>
+
+    <footer>
+        <p><strong>מחשבון בוסינסק - כלי עזר לימודי</strong></p>
+        <p>מחשבון זה פותח כחומר נלווה להרצאה מס' 3 בנושא תוספת מאמצים בקרקע, במסגרת הקורס "קרקע וביסוס".</p>
+        <p>&copy; 2024 שלומי שאול. כל הזכויות שמורות.</p>
+    </footer>
+    
+    <!-- Modals -->
+    <div id="assumptions-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="this.parentElement.parentElement.style.display='none'">&times;</span><h3>הנחות יסוד לשיטת בוסינסק</h3><ul><li><strong>אלסטי:</strong> החומר מציית לחוק הוק, כלומר, קיים יחס ישר בין מאמץ לעיבור, והחומר חוזר למצבו המקורי עם הסרת העומס. הנחה זו מאפשרת שימוש בעקרונות תורת האלסטיות.</li><li><strong>הומוגני:</strong> תכונות הקרקע זהות בכל נקודה ונקודה במרחב הקרקע.</li><li><strong>איזוטרופי:</strong> תכונות הקרקע זהות בכל הכיוונים (אופקי, אנכי, וכו') בנקודה נתונה.</li><li><strong>חצי אינסופי:</strong> הקרקע משתרעת לאינסוף בכיוון האופקי (במישור x-y) ולעומק (בכיוון z), ומוגבלת על ידי מישור אופקי עליון, הוא פני הקרקע.</li></ul></div></div>
+    <div id="image-modal" class="modal"><div class="modal-content"><span class="close-btn" onclick="this.parentElement.parentElement.style.display='none'">&times;</span><img id="modal-image" src=""></div></div>
+    
+    <!-- Report structure for PDF export -->
+    <div id="pdf-report" style="position: absolute; left: -9999px; padding: 20px; background: white; color: black; direction: rtl; width: 800px;"></div>
+
+
+    <script>
+        // --- DATA FROM BOUSSINESQ CHARTS (HIGHLY ACCURATE) ---
+        const boussinesqCircularData={0:{0:1,.2:1,.4:1,.6:1,.8:1,1:.5},.1:{0:.999,.2:.998,.4:.996,.6:.989,.8:.968,1:.9,1.2:.78,1.5:.5,2:.22},.2:{0:.993,.2:.989,.4:.978,.6:.95,.8:.891,1:.795,1.2:.67,1.5:.43,2:.2},.5:{0:.911,.2:.897,.4:.861,.6:.798,.8:.71,1:.6,1.2:.49,1.5:.31,2:.15},1:{0:.646,.2:.628,.4:.588,.6:.528,.8:.453,1:.37,1.2:.3,1.5:.19,2:.09},1.5:{0:.424,.2:.412,.4:.385,.6:.345,.8:.295,1:.24,1.2:.195,1.5:.125,2:.06},2:{0:.285,.2:.277,.4:.26,.6:.233,.8:.2,1:.165,1.2:.135,1.5:.09,2:.045},3:{0:.144,.2:.14,.4:.132,.6:.12,.8:.105,1:.088,1.2:.073,1.5:.048,2:.025},4:{0:.087,.2:.085,.4:.08,.6:.073,.8:.065,1:.055,1.2:.045,1.5:.03,2:.015},6:{0:.04,.2:.039,.4:.037,.6:.034,.8:.03,1:.026,1.2:.021,1.5:.014,2:.007}};
+        const boussinesqSquareData={0:{0:1},.2:{0:.994},.4:{0:.965},.6:{0:.908},.8:{0:.832},1:{0:.748,.2:.72,.4:.64,.6:.53,.8:.42,1:.32},1.2:{0:.662,.6:.49},1.4:{0:.58,.7:.43},1.6:{0:.505,.8:.37},1.8:{0:.44,.9:.315},2:{0:.385,1:.27},2.5:{0:.28,1.25:.18},3:{0:.21,1.5:.12},4:{0:.13,2:.06},5:{0:.085,2.5:.04},6:{0:.06,3:.025}};
+        const boussinesqStripData = {0:{0:1},.2:{0:.996},.4:{0:.976},.6:{0:.939},.8:{0:.888},1:{0:.829,.2:.8,.4:.72,.6:.6,.8:.48,1:.37},1.2:{0:.768,.6:.56},1.4:{0:.708,.7:.49},1.6:{0:.65,.8:.43},1.8:{0:.598,.9:.38},2:{0:.55,1:.34},2.5:{0:.455,1.25:.26},3:{0:.38,1.5:.2},4:{0:.28,2:.13},5:{0:.21,2.5:.09},6:{0:.165,3:.06}};
+
+        // --- UI, THEME, MODAL, RESET LOGIC ---
+        const themeToggle = document.getElementById('theme-toggle');
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            themeToggle.textContent = isDark ? '☀️' : '🌙';
+            updateSceneColors(isDark);
+        });
+
+        document.getElementById('foundationType').addEventListener('change', () => {
+            const isCircular = document.getElementById('foundationType').value === 'circular';
+            document.getElementById('circular-inputs').style.display = isCircular ? 'block' : 'none';
+            document.getElementById('rect-inputs').style.display = isCircular ? 'none' : 'block';
+        });
+        
+        document.querySelectorAll('.accordion-header').forEach(h => h.addEventListener('click', () => h.parentElement.classList.toggle('active')));
+        
+        function showImageModal(src) {
+            document.getElementById('modal-image').src = src;
+            document.getElementById('image-modal').style.display = 'flex';
+        }
+        
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            document.getElementById('loadQ').value = 100;
+            document.getElementById('depthZ').value = 5;
+            document.getElementById('radiusR').value = 2.5;
+            document.getElementById('radialDist').value = 1;
+            document.getElementById('widthB').value = 4;
+            document.getElementById('horizontalDist').value = 1;
+            calculate();
+        });
+
+        // --- INTERPOLATION LOGIC ---
+        function interpolate(x,x0,x1,y0,y1){if(x0===x1)return y0;return y0+(x-x0)*(y1-y0)/(x1-x0)}
+        function findBounds(v,k){if(v<=k[0])return[k[0],k[0]];if(v>=k[k.length-1])return[k[k.length-1],k[k.length-1]];for(let i=0;i<k.length-1;i++){if(v>=k[i]&&v<=k[i+1])return[k[i],k[i+1]]}return[null,null]}
+        function getInfluenceFactor(d,v1,v2){const k1=Object.keys(d).map(parseFloat).sort((a,b)=>a-b);const[b1,b2]=findBounds(v1,k1);if(b1===null)return 0;const grv=(k,v)=>{const r=d[k];if(!r)return 0;const k2=Object.keys(r).map(parseFloat).sort((a,b)=>a-b);const[rb1,rb2]=findBounds(v,k2);if(rb1===null)return 0;return interpolate(v,rb1,rb2,r[rb1],r[rb2])};const r1=grv(b1,v2);const r2=grv(b2,v2);return interpolate(v1,b1,b2,r1,r2)}
+
+        // --- THREE.JS VISUALIZATION ---
+        let scene, camera, renderer, controls, foundationMesh, bulbGroup;
+        function initScene(){const c=document.getElementById('canvas-container');scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(50,c.clientWidth/c.clientHeight,0.1,1e3);camera.position.set(15,15,25);camera.lookAt(0,0,0);renderer=new THREE.WebGLRenderer({antialias:!0,alpha:!0,preserveDrawingBuffer:!0});renderer.setSize(c.clientWidth,c.clientHeight);renderer.setClearColor(0,0);c.appendChild(renderer.domElement);controls=new THREE.OrbitControls(camera,renderer.domElement);controls.enableDamping=!0;bulbGroup=new THREE.Group();scene.add(bulbGroup);window.addEventListener('resize',()=>{camera.aspect=c.clientWidth/c.clientHeight;camera.updateProjectionMatrix();renderer.setSize(c.clientWidth,c.clientHeight)});updateSceneColors(document.body.classList.contains('dark-mode'));animate()}
+        function updateSceneColors(d){scene.remove(scene.getObjectByName("grid"));const g=new THREE.GridHelper(40,40,d?0x444444:0xcccccc,d?0x444444:0xcccccc);g.name="grid";scene.add(g);scene.remove(scene.getObjectByName("ambient"));const a=new THREE.AmbientLight(d?0x888888:0xdddddd);a.name="ambient";scene.add(a);scene.remove(scene.getObjectByName("directional"));const l=new THREE.DirectionalLight(0xffffff,0.6);l.position.set(5,10,7.5);l.name="directional";scene.add(l)}
+        function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera)}
+        function drawFoundation(t,s){if(foundationMesh)scene.remove(foundationMesh);const m=new THREE.MeshStandardMaterial({color:0x888888});let g;if(t==='circular'){g=new THREE.CylinderGeometry(s,s,0.5,32)}else{const l=t==='square'?s:20;g=new THREE.BoxGeometry(s,0.5,l)}foundationMesh=new THREE.Mesh(g,m);foundationMesh.position.y=0.25;scene.add(foundationMesh)}
+        function drawStressBulbs(t,s){while(bulbGroup.children.length){bulbGroup.remove(bulbGroup.children[0])}const l=[0.8,0.6,0.4,0.2,0.1,0.05];const c=[0xff0000,0xffa500,0xffff00,0x00ff00,0x0000ff,0x4b0082];let d,n;if(t==='circular'){d=boussinesqCircularData;n=s}else{d=t==='square'?boussinesqSquareData:boussinesqStripData;n=s/2}const z=Object.keys(d).map(parseFloat).sort((a,b)=>a-b);l.forEach((v,i)=>{const p=[];for(const k of z){const r=d[k];if(!r)continue;const o=Object.keys(r).map(parseFloat).sort((a,b)=>a-b);let a=-1;for(let j=0;j<o.length-1;j++){const I1=r[o[j]];const I2=r[o[j+1]];if((v<=I1&&v>=I2)||(v>=I1&&v<=I2)){a=interpolate(v,I1,I2,o[j],o[j+1]);break}}if(a>=0)p.push(new THREE.Vector3(a*n,-k*n,0))}const m=p.slice().reverse().map(pt=>new THREE.Vector3(-pt.x,pt.y,0));const h=p.concat(m);if(h.length>2){const cv=new THREE.CatmullRomCurve3(h);const cp=cv.getPoints(50);const g=new THREE.BufferGeometry().setFromPoints(cp);const mt=new THREE.LineBasicMaterial({color:c[i]});const b=new THREE.Line(g,mt);bulbGroup.add(b)}})}
+
+        // --- MAIN CALCULATION FUNCTION ---
+        function calculate() {
+            try {
+                const q = parseFloat(document.getElementById('loadQ').value);
+                const z = parseFloat(document.getElementById('depthZ').value);
+                const type = document.getElementById('foundationType').value;
+                let R0, B, r, x, data, size, normVar1Name, normVar2Name, normVar1, normVar2, I, stress, vizTitleText, resultSummary;
+
+                if (isNaN(q) || isNaN(z) || q <= 0 || z <= 0) { throw new Error("אנא הזן ערכים חיוביים תקינים עבור עומס ועומק."); }
+
+                if (type === 'circular') {
+                    R0 = parseFloat(document.getElementById('radiusR').value); r = parseFloat(document.getElementById('radialDist').value);
+                    if (isNaN(R0) || isNaN(r) || R0 <= 0 || r < 0) { throw new Error("ערכים לא תקינים ליסוד עגול."); }
+                    data = boussinesqCircularData; normVar1Name = "z/R₀"; normVar2Name = "r/R₀"; normVar1 = z / R0; normVar2 = r / R0; size = R0;
+                    vizTitleText = `יסוד עגול (R₀=${R0}m), q=${q} kN/m²`;
+                    resultSummary = `תוצאה עבור: יסוד עגול, q=${q}, R₀=${R0}, z=${z}, r=${r}`;
+                } else {
+                    B = parseFloat(document.getElementById('widthB').value); x = parseFloat(document.getElementById('horizontalDist').value);
+                    const b = B / 2;
+                    if (isNaN(B) || isNaN(x) || B <= 0 || x < 0 || x > b) { throw new Error("ערכים לא תקינים ליסוד מרובע/עובר. ודא ש-x קטן מ-B/2."); }
+                    data = type === 'square' ? boussinesqSquareData : boussinesqStripData; normVar1Name = "z/b"; normVar2Name = "x/b"; normVar1 = z / b; normVar2 = x / b; size = B;
+                    const typeName = type === 'square' ? 'ריבועי' : 'עובר';
+                    vizTitleText = `יסוד ${typeName} (B=${B}m), q=${q} kN/m²`;
+                    resultSummary = `תוצאה עבור: יסוד ${typeName}, q=${q}, B=${B}, z=${z}, x=${x}`;
+                }
+
+                I = getInfluenceFactor(data, normVar1, normVar2);
+                if (isNaN(I)) throw new Error("לא ניתן היה לחשב את מקדם ההשפעה. בדוק את ערכי הקלט.");
+                
+                stress = I * q;
+
+                document.getElementById('result-summary').textContent = resultSummary;
+                document.getElementById('result-value').textContent = `Δσ_z = ${stress.toFixed(3)} kN/m²`;
+                document.getElementById('final-result').style.display = 'block';
+                
+                let steps = `<p><strong>1. בחירת סוג יסוד:</strong> ${type === 'circular' ? 'עגול' : (type === 'square' ? 'ריבועי' : 'עובר')}</p><p><strong>2. חישוב פרמטרים מנורמלים:</strong></p><ul><li>${normVar1Name} = ${z} / ${type === 'circular' ? R0 : (B/2).toFixed(2)} = ${normVar1.toFixed(3)}</li><li>${normVar2Name} = ${type === 'circular' ? r : x} / ${type === 'circular' ? R0 : (B/2).toFixed(2)} = ${normVar2.toFixed(3)}</li></ul><p><strong>3. קביעת מקדם השפעה (I):</strong></p><p>באמצעות אינטרפולציה על נתוני התרשים, נמצא כי: <strong>I ≈ ${I.toFixed(4)}</strong></p><p><strong>4. חישוב תוספת המאמץ:</strong></p><p>Δσ_z = I × q = ${I.toFixed(4)} × ${q} = <strong>${stress.toFixed(3)} kN/m²</strong></p>`;
+                document.getElementById('solution-steps').innerHTML = steps;
+
+                document.getElementById('viz-title').textContent = vizTitleText;
+                drawFoundation(type, size);
+                drawStressBulbs(type, size);
+            } catch (error) {
+                alert(error.message);
+                console.error("Calculation Error:", error);
+            }
+        }
+        
+        // --- PDF EXPORT ---
+        document.getElementById('export-pdf-btn').addEventListener('click', async () => {
+            alert("הדוח יופק כעת. אנא ודא שזווית התצוגה של האנימציה היא הרצויה עבורך, כיוון שהיא תצולם למסמך.");
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+                
+                renderer.render(scene, camera);
+                const canvasImage = renderer.domElement.toDataURL('image/png', 1.0);
+                
+                const reportElement = document.getElementById('pdf-report');
+                const finalResultHTML = document.getElementById('final-result').innerHTML;
+                const solutionStepsHTML = document.getElementById('solution-steps').innerHTML;
+                
+                // Populate the hidden div for rendering
+                reportElement.innerHTML = `
+                    <div style="padding: 20px; background: ${getComputedStyle(document.body).getPropertyValue('--surface-color')}; color: ${getComputedStyle(document.body).getPropertyValue('--text-color')}; font-family: var(--font-family);">
+                        <h1 style="text-align: center; color: ${getComputedStyle(document.body).getPropertyValue('--primary-color')}; font-size: 22px;">דוח חישוב מאמצים - בוסינסק</h1>
+                        <h2 style="text-align: right; font-size: 18px;">מרצה: שלומי שאול</h2>
+                        <hr>
+                        ${solutionStepsHTML}
+                        <hr>
+                        <div style="background-color: ${getComputedStyle(document.body).getPropertyValue('--bg-color')}; border: 1px solid ${getComputedStyle(document.body).getPropertyValue('--border-color')}; padding: 10px; border-radius: 5px; text-align: center; margin-top: 10px;">
+                            ${finalResultHTML}
+                        </div>
+                    </div>
+                `;
+                
+                const reportCanvas = await html2canvas(reportElement, { 
+                    scale: 3,
+                    backgroundColor: getComputedStyle(document.body).getPropertyValue('--surface-color'),
+                    useCORS: true
+                });
+                const reportImage = reportCanvas.toDataURL('image/png', 1.0);
+                
+                const pdfWidth = doc.internal.pageSize.getWidth();
+                const pdfHeight = doc.internal.pageSize.getHeight();
+                const reportImgProps = doc.getImageProperties(reportImage);
+                let reportPdfHeight = (reportImgProps.height * (pdfWidth - 20)) / reportImgProps.width;
+
+                if (reportPdfHeight > pdfHeight - 20) reportPdfHeight = pdfHeight - 20;
+
+                doc.addImage(reportImage, 'PNG', 10, 10, pdfWidth - 20, reportPdfHeight);
+                
+                let currentY = reportPdfHeight + 20;
+                if (currentY + 95 > pdfHeight) { // Check if viz fits
+                     doc.addPage();
+                     currentY = 10;
+                }
+                
+                const vizTitleText = document.getElementById('viz-title').textContent;
+                const vizTitleElement = document.getElementById('viz-title');
+                const vizTitleCanvas = await html2canvas(vizTitleElement, {
+                    scale: 3,
+                    backgroundColor: null
+                });
+                const vizTitleImage = vizTitleCanvas.toDataURL('image/png', 1.0);
+                const vizTitleProps = doc.getImageProperties(vizTitleImage);
+                const vizTitlePdfWidth = 80;
+                const vizTitlePdfHeight = (vizTitleProps.height * vizTitlePdfWidth) / vizTitleProps.width;
+
+                doc.addImage(vizTitleImage, 'PNG', (pdfWidth - vizTitlePdfWidth) / 2, currentY, vizTitlePdfWidth, vizTitlePdfHeight);
+                doc.addImage(canvasImage, 'PNG', 40, currentY + vizTitlePdfHeight + 5, 130, 75);
+
+                const footerElement = document.querySelector('footer');
+                const footerCanvas = await html2canvas(footerElement, {
+                     scale: 3,
+                     backgroundColor: getComputedStyle(document.body).getPropertyValue('--surface-color'),
+                     useCORS: true
+                });
+                const footerImage = footerCanvas.toDataURL('image/png', 1.0);
+                const footerImgProps = doc.getImageProperties(footerImage);
+                const footerPdfHeight = (footerImgProps.height * (pdfWidth - 20)) / footerImgProps.width;
+                doc.addImage(footerImage, 'PNG', 10, pdfHeight - footerPdfHeight - 5, pdfWidth - 20, footerPdfHeight);
+
+
+                doc.save('Boussinesq_Report.pdf');
+            } catch(e) {
+                console.error("PDF Export Error:", e);
+                alert("אירעה שגיאה בעת יצירת קובץ ה-PDF. נסה שוב או בדוק את הקונסול.");
+            }
+        });
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initScene();
+            document.getElementById('foundationType').dispatchEvent(new Event('change'));
+            calculate();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מחשבון למיון קרקעות | שלומי שאול</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <!-- Libraries for Pan/Zoom and PDF Export -->
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-light: #f1f5f9; --bg-dark: #1e293b; --card-light: #ffffff;
+            --card-dark: #334155; --text-light: #1e293b; --text-dark: #e2e8f0;
+            --border-light: #cbd5e1; --border-dark: #475569; --primary: #3b82f6;
+            --primary-hover: #2563eb; --warning: #f59e0b; --error: #ef4444;
+            --tab-active-bg: var(--card-light); --tab-inactive-bg: var(--bg-light);
+            --btn-secondary-bg: #64748b; --btn-secondary-hover: #475569;
+        }
+        html.dark { 
+            --tab-active-bg: var(--card-dark); --tab-inactive-bg: var(--bg-dark);
+             --btn-secondary-bg: #475569; --btn-secondary-hover: #334155;
+        }
+        html.dark { color-scheme: dark; }
+        body { font-family: 'Assistant', sans-serif; background-color: var(--bg-light); color: var(--text-light); transition: background-color 0.3s, color 0.3s; }
+        html.dark body { background-color: var(--bg-dark); color: var(--text-dark); }
+        .card { background-color: var(--card-light); border: 1px solid var(--border-light); }
+        html.dark .card { background-color: var(--card-dark); border-color: var(--border-dark); }
+        .btn-primary { background-color: var(--primary); color: white; transition: background-color 0.2s; }
+        .btn-primary:hover:not(:disabled) { background-color: var(--primary-hover); }
+        .btn-primary:disabled { background-color: #94a3b8; cursor: not-allowed; }
+        .btn-secondary { background-color: var(--btn-secondary-bg); color: white; transition: background-color: 0.2s; }
+        .btn-secondary:hover:not(:disabled) { background-color: var(--btn-secondary-hover); }
+        .input-field { background-color: #f8fafc; border: 1px solid var(--border-light); }
+        html.dark .input-field { background-color: #3e4c60; border-color: var(--border-dark); color: var(--text-dark); }
+        #atterberg-bar-container { height: 20px; background-color: #e2e8f0; border-radius: 5px; position: relative; overflow: hidden; margin-top: 8px; }
+        html.dark #atterberg-bar-container { background-color: #475569; }
+        #plastic-range-bar { position: absolute; height: 100%; background: linear-gradient(90deg, #fdba74, #f97316); transition: all 0.5s ease-in-out; }
+        .prose ul { padding-right: 20px; padding-left: 20px;} .prose li { margin-top: 0.5em; }
+        .info-btn { background: none; border: none; padding: 0; margin-inline-start: 4px; cursor: pointer; display: inline-flex; align-items: center;}
+        .tab-btn { background-color: var(--tab-inactive-bg); border-bottom: 2px solid transparent; }
+        .tab-btn.active { background-color: var(--tab-active-bg); border-color: var(--primary); font-weight: 700; }
+        #toast-notification {
+            position: fixed; top: 20px; right: 20px; background-color: #22c55e; color: white; padding: 1rem; border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 100; transform: translateX(200%); transition: transform 0.5s ease-in-out;
+        }
+        #toast-notification.show { transform: translateX(0); }
+        
+        /* Styles for the hidden PDF container */
+        #pdf-container {
+            position: absolute;
+            left: -9999px;
+            width: 210mm; /* A4 width */
+            background: white;
+            color: black;
+            font-family: 'Assistant', sans-serif;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div id="app" class="max-w-7xl mx-auto space-y-6">
+
+        <header class="mb-6">
+            <div class="flex justify-between items-center w-full">
+                <div class="w-1/3 flex justify-start">
+                    <img src="https://c.ort.org.il/jerusalem/wp-content/uploads/sites/7/2025/04/%D7%90%D7%95%D7%A8%D7%98-%D7%99%D7%A8%D7%95%D7%A9%D7%9C%D7%99%D7%9D-%D7%9C%D7%95%D7%92%D7%95-%D7%9B%D7%97%D7%95%D7%9C-1.png" class="h-16" alt="לוגו אורט ירושלים">
+                </div>
+                <div class="w-1/3 text-center">
+                    <h1 class="text-2xl md:text-4xl font-bold text-blue-600 dark:text-blue-400" data-lang-key="main_title"></h1>
+                    <h2 class="text-md md:text-lg text-slate-600 dark:text-slate-400 mt-1" data-lang-key="subtitle"></h2>
+                </div>
+                <div class="w-1/3 flex justify-end items-center space-x-2 rtl:space-x-reverse">
+                    <button id="theme-toggle" class="p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"><svg id="theme-icon-light" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg><svg id="theme-icon-dark" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg></button>
+                    <button id="lang-toggle" class="p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-bold">EN/עב</button>
+                </div>
+            </div>
+        </header>
+        
+        <div class="border-b border-slate-300 dark:border-slate-600">
+            <nav class="-mb-px flex space-x-4 rtl:space-x-reverse" aria-label="Tabs">
+                <button class="tab-btn active py-3 px-4 text-sm" data-tab="classification" data-lang-key="classification_tab"></button>
+                <button class="tab-btn py-3 px-4 text-sm" data-tab="proctor" data-lang-key="proctor_tab"></button>
+            </nav>
+        </div>
+
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="lg:col-span-1 space-y-6">
+                <div id="classification-tab-content">
+                    <div class="card p-6 rounded-lg shadow-md">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold" data-lang-key="input_title"></h2>
+                            <div class="w-1/2">
+                                <label for="case-study-select" class="sr-only" data-lang-key="case_studies_label"></label>
+                                <select id="case-study-select" class="w-full p-2 rounded-md input-field text-sm"></select>
+                            </div>
+                        </div>
+                        <div class="space-y-6">
+                            <div class="flex items-center gap-4">
+                                <div class="flex-grow">
+                                    <label for="sampleWeight" class="block text-sm font-medium mb-1" data-lang-key="sample_weight"></label>
+                                    <input type="number" id="sampleWeight" min="0" placeholder="לדוגמה: 1400" class="w-full p-2 rounded-md input-field">
+                                </div>
+                                <div class="flex-shrink-0">
+                                     <label class="block text-sm font-medium mb-1 text-center" data-lang-key="remaining_weight_label"></label>
+                                    <div id="weight-animation-container" class="w-20 h-24 bg-gray-200 dark:bg-gray-600 rounded-lg border-2 border-gray-400 dark:border-gray-500 relative overflow-hidden">
+                                        <div id="weight-fill" class="absolute bottom-0 left-0 w-full bg-amber-700 transition-all duration-500"></div>
+                                        <div id="weight-text" class="absolute inset-0 flex items-center justify-center text-lg font-bold text-white" style="text-shadow: 1px 1px 2px black;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="sieve-section-container" class="grid grid-cols-2 gap-4">
+                                <div class="col-span-2 sm:col-span-1">
+                                    <h3 class="text-lg font-semibold mb-2 flex items-center" data-lang-key="sieve_analysis"></h3>
+                                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-2" data-lang-key="sieve_instructions"></p>
+                                    <div id="sieve-inputs" class="space-y-2 pr-2 rtl:pr-2 ltr:pl-2"></div>
+                                </div>
+                                 <div class="col-span-2 sm:col-span-1 flex items-center justify-center">
+                                   <div id="sieve-animation-canvas-container" class="w-full h-full relative">
+                                       <canvas id="sieve-animation-canvas"></canvas>
+                                   </div>
+                                </div>
+                            </div>
+                            <div id="atterberg-section" class="pt-6 mt-6 border-t border-slate-200 dark:border-slate-600">
+                                <h3 class="text-lg font-semibold mb-2 flex items-center" data-lang-key="atterberg_limits"></h3>
+                                 <div class="flex items-end space-x-4 rtl:space-x-reverse mb-3">
+                                    <div class="flex-1">
+                                        <label for="liquidLimit" class="flex items-center text-sm font-medium mb-1" data-lang-key="ll"></label>
+                                        <input type="number" id="liquidLimit" min="0" class="w-full p-2 rounded-md input-field">
+                                    </div>
+                                    <div class="flex-1">
+                                        <label for="plasticLimit" class="flex items-center text-sm font-medium mb-1" data-lang-key="pl"></label>
+                                        <input type="number" id="plasticLimit" min="0" class="w-full p-2 rounded-md input-field">
+                                    </div>
+                                    <div class="flex-1 text-center pb-2">
+                                        <span class="flex items-center justify-center text-sm font-medium mb-1" data-lang-key="pi"></span>
+                                        <span id="pi-value" class="text-xl font-bold text-blue-600 dark:text-blue-400">-</span>
+                                    </div>
+                                </div>
+                                <div id="atterberg-bar-container">
+                                    <div id="plastic-range-bar"></div>
+                                </div>
+                                <div class="flex justify-between text-xs px-1 mt-1"><span>0</span><span>20</span><span>40</span><span>60</span><span>80</span><span>100</span></div>
+                            </div>
+                            <div id="validation-message" class="p-3 rounded-md text-sm font-semibold hidden"></div>
+                            <div class="flex gap-2">
+                               <button id="calculate-btn" class="w-full btn-primary font-bold py-3 px-4 rounded-lg text-lg" data-lang-key="calculate"></button>
+                               <button id="reset-btn" class="w-auto btn-secondary font-bold py-3 px-4 rounded-lg text-lg" data-lang-key="reset_form"></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="proctor-tab-content" class="hidden">
+                    <div class="card p-6 rounded-lg shadow-md space-y-6">
+                        <div id="proctor-info" class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                            <h3 class="text-lg font-bold mb-2" data-lang-key="proctor_info_title"></h3>
+                            <p class="text-sm" data-lang-key="proctor_info_p1"></p>
+                            <p class="mt-2 text-sm" data-lang-key="proctor_info_p2"></p>
+                        </div>
+
+                        <div>
+                             <h2 class="text-xl font-bold mb-4" data-lang-key="proctor_input_title"></h2>
+                             <div id="proctor-inputs" class="space-y-3">
+                                <div class="flex items-center space-x-2 rtl:space-x-reverse font-semibold text-sm">
+                                    <div class="w-1/2" data-lang-key="proctor_wc_header"></div>
+                                    <div class="w-1/2" data-lang-key="proctor_dry_density_header"></div>
+                                </div>
+                             </div>
+                             <button id="add-proctor-row-btn" class="mt-4 text-sm btn-primary py-1 px-3 rounded-md" data-lang-key="proctor_add_row"></button>
+                             <button id="calculate-proctor-btn" class="mt-6 w-full btn-primary font-bold py-3 px-4 rounded-lg text-lg" data-lang-key="proctor_calculate"></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="results-section" class="lg:col-span-1 space-y-6 hidden">
+                 <div class="card p-6 rounded-lg shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                      <h2 class="text-xl font-bold" data-lang-key="results_title"></h2>
+                      <button id="export-pdf-btn" class="btn-secondary text-sm py-2 px-3 rounded-md flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 11-2 0 1 1 0 012 0zM9 12a1 1 0 00-1 1v3a1 1 0 001 1h2a1 1 0 001-1v-3a1 1 0 00-1-1H9z"></path></svg>
+                        <span data-lang-key="export_pdf"></span>
+                      </button>
+                    </div>
+                    <div id="classification-results" class="space-y-6">
+                        <div id="uscs-result-wrapper"><div id="uscs-result-card" class="card border-t-4 border-blue-500 p-4 rounded-lg space-y-3"></div></div>
+                        <div id="aashto-result-wrapper"><div id="aashto-result-card" class="card border-t-4 border-green-500 p-4 rounded-lg space-y-3"></div></div>
+                        <div id="table-wrapper">
+                            <h3 class="text-lg font-semibold mb-2" data-lang-key="sieve_results_table"></h3>
+                            <div class="overflow-x-auto"><table class="w-full text-sm text-left rtl:text-right"><thead class="bg-gray-100 dark:bg-slate-700"><tr><th class="p-2" data-lang-key="sieve_size"></th><th class="p-2" data-lang-key="retained_weight"></th><th class="p-2" data-lang-key="retained_cumulative"></th><th class="p-2" data-lang-key="retained_percent"></th><th class="p-2" data-lang-key="passing_percent"></th></tr></thead><tbody id="results-table-body"></tbody></table></div>
+                        </div>
+                        <div id="grain-size-chart-wrapper">
+                            <h3 class="text-lg font-semibold mb-2 flex items-center justify-between">
+                                <span data-lang-key="grain_size_curve"></span>
+                                <div class="flex items-center gap-2">
+                                    <button class="expand-chart-btn btn-secondary text-xs p-1 rounded-md" data-chart="grainSizeChart" title="הרחב תרשים"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 0h-4m4 0l-5-5" /></svg></button>
+                                    <button class="reset-zoom-btn btn-secondary text-xs py-1 px-2 rounded-md" data-chart="grainSizeChart" data-lang-key="reset_zoom"></button>
+                                </div>
+                            </h3>
+                             <div class="p-2 rounded-lg card"><canvas id="grainSizeChart" height="400"></canvas></div>
+                             <div id="coefficients-display" class="card p-3 mt-2 text-sm text-center"></div>
+                        </div>
+                        <div id="plasticity-chart-wrapper">
+                            <h3 class="text-lg font-semibold mb-2 flex items-center justify-between">
+                                <span data-lang-key="plasticity_chart_title"></span>
+                                <div class="flex items-center gap-2">
+                                     <button class="expand-chart-btn btn-secondary text-xs p-1 rounded-md" data-chart="plasticityChart" title="הרחב תרשים"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 0h-4m4 0l-5-5" /></svg></button>
+                                    <button class="reset-zoom-btn btn-secondary text-xs py-1 px-2 rounded-md" data-chart="plasticityChart" data-lang-key="reset_zoom"></button>
+                                </div>
+                            </h3>
+                             <div class="p-2 rounded-lg card"><canvas id="plasticityChart" height="300"></canvas></div>
+                        </div>
+                    </div>
+                    <div id="proctor-results" class="hidden space-y-6">
+                        <div id="proctor-summary" class="grid grid-cols-2 gap-4 text-center">
+                            <div>
+                                <h4 class="text-md font-semibold" data-lang-key="proctor_omc_result"></h4>
+                                <p id="omc-result" class="text-2xl font-bold text-blue-500"></p>
+                            </div>
+                             <div>
+                                <h4 class="text-md font-semibold" data-lang-key="proctor_mdd_result"></h4>
+                                <p id="mdd-result" class="text-2xl font-bold text-blue-500"></p>
+                            </div>
+                        </div>
+                        <div id="proctor-chart-wrapper">
+                             <h3 class="text-lg font-semibold mb-2 flex items-center justify-between">
+                                 <span data-lang-key="proctor_curve"></span>
+                                 <div class="flex items-center gap-2">
+                                     <button class="expand-chart-btn btn-secondary text-xs p-1 rounded-md" data-chart="proctorChart" title="הרחב תרשים"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 0h-4m4 0l-5-5" /></svg></button>
+                                    <button class="reset-zoom-btn btn-secondary text-xs py-1 px-2 rounded-md" data-chart="proctorChart" data-lang-key="reset_zoom"></button>
+                                 </div>
+                             </h3>
+                             <div class="p-2 rounded-lg card"><canvas id="proctorChart" height="300"></canvas></div>
+                        </div>
+                    </div>
+                 </div>
+            </div>
+        </main>
+        
+        <footer class="text-center text-xs text-slate-500 dark:text-slate-400 mt-8">
+            <p data-lang-key="footer_rights"></p>
+        </footer>
+    </div>
+
+    <div id="solution-modal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center p-4">
+        <div class="card max-w-5xl w-full rounded-lg shadow-xl max-h-[90vh] overflow-y-auto"><div class="p-6"><div class="flex justify-between items-center mb-4 border-b pb-3 dark:border-slate-600"><h2 id="modal-title" class="text-2xl font-bold"></h2><button id="modal-close-btn" class="text-4xl font-light leading-none p-1">&times;</button></div><div id="modal-content" class="text-base space-y-4 prose dark:prose-invert max-w-none"></div></div></div>
+    </div>
+    
+    <div id="toast-notification"></div>
+
+    <script>
+    // --- START: GLOBAL CONFIGURATION & STATE ---
+    let currentResults = {}; // To store calculation results for PDF export
+    const lang = {
+        'he': {
+            main_title: "מחשבון למיון קרקעות אאשטו ושיטת המיון האחידה",
+            subtitle: "כלי עזר הנדסי | מגיש: שלומי שאול",
+            classification_tab: "מיון קרקע",
+            proctor_tab: "בדיקת פרוקטור",
+            case_studies_label: "בחר מקרה מבחן",
+            case_study_placeholder: "טען דוגמה מוכנה מראש...",
+            case_study_sp: "חול חופי (SP)",
+            case_study_ch: "חרסית שמנה (CH)",
+            case_study_gw: "מצע סוג א' (GW)",
+            case_study_sm: "חמרה (SM)",
+            case_study_cl: "חרסית רזה (CL)",
+            case_study_loess_ml: "קרקע לס (ML)",
+            case_study_basalt_ch: "חרסית בזלתית (CH)",
+            case_study_kurkar_spsm: "כורכר (SP-SM)",
+            case_study_terra_rossa_cl: "טרה רוסה (CL)",
+            case_study_alluvium_sc: "סחף נחלים (SC)",
+            input_title: "1. הזנת נתוני מיון",
+            sample_weight: "משקל מדגם כולל (גרם)",
+            sieve_analysis: "אנליזת נפות<button class='info-btn' data-info='sieve_info'><svg class='w-4 h-4 text-blue-500' fill='currentColor' viewBox='0 0 20 20'><path fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z' clip-rule='evenodd'></path></svg></button>",
+            sieve_instructions: "הזן את המשקל המשתייר (גרם).",
+            retained_on_sieve: "משתייר על נפה",
+            atterberg_limits: "גבולות אטרברג <button class='info-btn' data-info='atterberg_info'><svg class='w-4 h-4 text-blue-500' fill='currentColor' viewBox='0 0 20 20'><path fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z' clip-rule='evenodd'></path></svg></button>",
+            ll: "LL %",
+            pl: "PL %",
+            pi: "PI",
+            sieve_info_title: "אנליזת נפות",
+            atterberg_info_title: "גבולות אטרברג",
+            calculate: "חשב וסווג",
+            reset_form: "נקה",
+            results_title: "2. תוצאות",
+            sieve_results_table: "טבלת תוצאות ניפוי",
+            sieve_size: "גודל נפה (מ\"מ)",
+            retained_weight: "משקל משתייר (ג')",
+            retained_cumulative: "משתייר מצטבר (ג')",
+            retained_percent: "% משתייר מצטבר",
+            passing_percent: "% עובר",
+            grain_size_curve: "עקומת התפלגות גרגרים",
+            uscs_classification: "מיון לפי שיטת USCS",
+            aashto_classification: "מיון לפי שיטת AASHTO",
+            classification: "סיווג:",
+            soil_name: "שם הקרקע:",
+            engineering_properties: "תכונות הנדסיות עיקריות:",
+            show_solution: "הצג דרך פתרון",
+            expand_soil_info: "הרחבה על סוג הקרקע",
+            uscs_solution_title: "שלבי פתרון - מיון אחיד (USCS)",
+            aashto_solution_title: "שלבי פתרון - AASHTO",
+            soil_info_title: "מידע מורחב על הקרקע",
+            pan: "צלחת",
+            gravel: "חצץ",
+            sand: "חול",
+            fines: "דקים",
+            validation_error: "שגיאת נתונים: סך המשקלים המשתיירים חורג ביותר מ-5% ממשקל המדגם הכולל. אנא בדוק את הנתונים שהזנת.",
+            validation_min_weight_error: "שגיאת נתונים: משקל המדגם המינימלי הוא 400 גרם.",
+            validation_pl_ll_error: "שגיאת נתונים: גבול פלסטי (PL) אינו יכול להיות גדול מגבול נזילות (LL).",
+            validation_negative_error: "שגיאת נתונים: לא ניתן להזין ערכים שליליים.",
+            validation_warning: "אזהרה: סך המשקלים המשתיירים חורג ב-{diff}% ממשקל המדגם. ייתכן שיש אי-דיוק קל בנתונים.",
+            plasticity_chart_title: "דיאגרמת פלסטיות (קסגרנדה)",
+            remaining_weight_label: "נותר לדגום",
+            footer_rights: "© 2024 כל הזכויות שמורות לשלומי שאול",
+            proctor_input_title: "1. הזנת נתוני פרוקטור",
+            proctor_wc_header: "תכולת רטיבות (%) <button class='info-btn' data-info='proctor_wc_info'><svg class='w-4 h-4 text-blue-500' fill='currentColor' viewBox='0 0 20 20'><path fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z' clip-rule='evenodd'></path></svg></button>",
+            proctor_dry_density_header: "צפיפות יבשה (ק\"ג / מ³) <button class='info-btn' data-info='proctor_dd_info'><svg class='w-4 h-4 text-blue-500' fill='currentColor' viewBox='0 0 20 20'><path fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z' clip-rule='evenodd'></path></svg></button>",
+            proctor_add_row: "+ הוסף שורה",
+            proctor_calculate: "חשב ושרטט עקומה",
+            proctor_omc_result: "תכולת רטיבות אופטימלית",
+            proctor_mdd_result: "צפיפות יבשה מרבית",
+            proctor_curve: "עקומת פרוקטור",
+            proctor_min_points_error: "יש להזין לפחות 3 נקודות נתונים.",
+            proctor_info_title: "מהי בדיקת פרוקטור?",
+            proctor_info_p1: "בדיקת פרוקטור היא בדיקת מעבדה הקובעת את הקשר בין תכולת הרטיבות של קרקע לבין הצפיפות היבשה שניתן להשיג על ידי הידוקה באנרגיה קבועה. מטרת הבדיקה היא למצוא את 'תכולת הרטיבות האופטימלית' (OMC) - כמות המים המדויקת שמאפשרת להדק את הקרקע לצפיפותה המרבית (MDD).",
+            proctor_info_p2: "תוצאות הבדיקה חיוניות לעבודות עפר, סלילת כבישים וביסוס מבנים. הן משמשות כערך ייחוס (רפרנס) לבקרת איכות ההידוק בשטח. מהנדס הביצוע דוגם את הקרקע המהודקת באתר, בודק את צפיפותה ורטיבותה, ומוודא שהושגה צפיפות של לפחות 95%-100% מהצפיפות המרבית שהתקבלה במעבדה.",
+            proctor_wc_info_title: "תכולת רטיבות (Water Content)",
+            proctor_wc_info_text: "יחס בין משקל המים שבקרקע למשקל החלקיקים המוצקים, מבוטא באחוזים. רטיבות נמוכה מדי לא מאפשרת הידוק טוב, ורטיבות גבוהה מדי גורמת למים 'להפריע' לגרגרים להתקרב זה לזה.",
+            proctor_dd_info_title: "צפיפות יבשה (Dry Density)",
+            proctor_dd_info_text: "משקל החלקיקים המוצקים של הקרקע ליחידת נפח. ערך זה מייצג את מידת הדחיסות של שלד הקרקע, ללא השפעת משקל המים. צפיפות יבשה גבוהה יותר מעידה על קרקע מהודקת וחזקה יותר.",
+            soil_prevalence_title: "תפוצה בישראל",
+            export_pdf: "ייצא ל-PDF",
+            reset_zoom: "אפס זום",
+            form_saved_toast: "הנתונים נשמרו בדפדפן!",
+            soilDetails: {}
+        },
+        'en': {
+            main_title: "AASHTO & Unified Soil Classification Calculator",
+            subtitle: "Geotechnical Engineering Toolkit | By: Shlomi Shaul",
+            classification_tab: "Soil Classification",
+            proctor_tab: "Proctor Test",
+            case_studies_label: "Select a Case Study",
+            case_study_placeholder: "Load a pre-made example...",
+            case_study_sp: "Coastal Sand (SP)",
+            case_study_ch: "Fat Clay (CH)",
+            case_study_gw: "Type A Subbase (GW)",
+            case_study_sm: "Hamra (SM)",
+            case_study_cl: "Lean Clay (CL)",
+            case_study_loess_ml: "Loess Soil (ML)",
+            case_study_basalt_ch: "Basaltic Clay (CH)",
+            case_study_kurkar_spsm: "Kurkar (SP-SM)",
+            case_study_terra_rossa_cl: "Terra Rossa (CL)",
+            case_study_alluvium_sc: "Alluvial Silt (SC)",
+            input_title: "1. Classification Data Input",
+            sample_weight: "Total Sample Weight (g)",
+            sieve_analysis: "Sieve Analysis<button class='info-btn' data-info='sieve_info'><svg class='w-4 h-4 text-blue-500' fill='currentColor' viewBox='0 0 20 20'><path fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z' clip-rule='evenodd'></path></svg></button>",
+            sieve_instructions: "Enter the weight retained (g).",
+            retained_on_sieve: "Retained on Sieve",
+            atterberg_limits: "Atterberg Limits <button class='info-btn' data-info='atterberg_info'><svg class='w-4 h-4 text-blue-500' fill='currentColor' viewBox='0 0 20 20'><path fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z' clip-rule='evenodd'></path></svg></button>",
+            ll: "LL %",
+            pl: "PL %",
+            pi: "PI",
+            sieve_info_title: "Sieve Analysis",
+            atterberg_info_title: "Atterberg Limits",
+            calculate: "Calculate & Classify",
+            reset_form: "Reset",
+            results_title: "2. Results",
+            sieve_results_table: "Sieve Analysis Results",
+            sieve_size: "Sieve Size (mm)",
+            retained_weight: "Weight Retained (g)",
+            retained_cumulative: "Cumulative Retained (g)",
+            retained_percent: "% Cumulative Retained",
+            passing_percent: "% Passing",
+            grain_size_curve: "Grain-Size Distribution Curve",
+            uscs_classification: "USCS Classification",
+            aashto_classification: "AASHTO Classification",
+            classification: "Classification:",
+            soil_name: "Soil Name:",
+            engineering_properties: "Key Engineering Properties:",
+            show_solution: "Show Solution Steps",
+            expand_soil_info: "Expand Soil Info",
+            uscs_solution_title: "Solution Steps - USCS",
+            aashto_solution_title: "Solution Steps - AASHTO",
+            soil_info_title: "Expanded Soil Information",
+            pan: "Pan",
+            gravel: "Gravel",
+            sand: "Sand",
+            fines: "Fines",
+            validation_error: "Data Error: The sum of retained weights differs from the total sample weight by more than 5%. Please check your inputs.",
+            validation_min_weight_error: "Data Error: Minimum sample weight is 400g.",
+            validation_pl_ll_error: "Data Error: Plastic Limit (PL) cannot be greater than Liquid Limit (LL).",
+            validation_negative_error: "Data Error: Negative values are not allowed.",
+            validation_warning: "Warning: The sum of retained weights differs from the sample weight by {diff}%. There might be a slight inaccuracy in the data.",
+            plasticity_chart_title: "Plasticity Chart (Casagrande Chart)",
+            remaining_weight_label: "Remaining",
+            footer_rights: "© 2024 All rights reserved to Shlomi Shaul",
+            proctor_input_title: "1. Proctor Data Input",
+            proctor_wc_header: "Water Content (%) <button class='info-btn' data-info='proctor_wc_info'><svg class='w-4 h-4 text-blue-500' fill='currentColor' viewBox='0 0 20 20'><path fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z' clip-rule='evenodd'></path></svg></button>",
+            proctor_dry_density_header: "Dry Density (kg/m³) <button class='info-btn' data-info='proctor_dd_info'><svg class='w-4 h-4 text-blue-500' fill='currentColor' viewBox='0 0 20 20'><path fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z' clip-rule='evenodd'></path></svg></button>",
+            proctor_add_row: "+ Add Row",
+            proctor_calculate: "Calculate & Plot Curve",
+            proctor_omc_result: "Optimal Moisture Content",
+            proctor_mdd_result: "Maximum Dry Density",
+            proctor_curve: "Proctor Curve",
+            proctor_min_points_error: "Please enter at least 3 data points.",
+            proctor_info_title: "What is the Proctor Test?",
+            proctor_info_p1: "The Proctor compaction test is a laboratory method of experimentally determining the optimal moisture content at which a given soil type will become most dense and achieve its maximum dry density.",
+            proctor_info_p2: "The results are crucial for earthworks, road construction, and foundations. They serve as a reference for quality control of the compaction on-site. The site engineer tests the compacted soil and verifies that its density is at least 95%-100% of the maximum density obtained in the lab.",
+            proctor_wc_info_title: "Water Content",
+            proctor_wc_info_text: "The ratio of the weight of water to the weight of the solid particles in a given volume of soil, expressed as a percentage. Too little water prevents good compaction, while too much water causes the water to interfere with the particles getting closer.",
+            proctor_dd_info_title: "Dry Density",
+            proctor_dd_info_text: "The weight of the solid particles of the soil per unit volume. This value represents the density of the soil skeleton, without the influence of the weight of water. A higher dry density indicates a better compacted and stronger soil.",
+            soil_prevalence_title: "Prevalence in Israel",
+            export_pdf: "Export to PDF",
+            reset_zoom: "Reset Zoom",
+            form_saved_toast: "Data saved in browser!",
+            soilDetails: {}
+        }
+    };
+    // Re-add the original soilDetails object from the user's file
+    lang.he.soilDetails = { 'GW': { properties: ['חוזק גזירה גבוה, יציבות טובה', 'חומר מצוין למצעים, תת-מסעה ושכבות בסיס', 'חדירות גבוהה למים'], description: "חצץ מדורג היטב הוא חומר מילוי ותשתית מהמעלה הראשונה. דירוג גרגרים רחב (כלומר, תערובת של גדלים שונים) מאפשר הידוק לצפיפות גבוהה ויצירת שלד גרגרים חזק ויציב. חומר זה אינו רגיש לשינויי רטיבות והוא בעל חדירות גבוהה, מה שהופך אותו למצוין עבור שכבות ניקוז, מצעים לכבישים ומסילות, ומילוי מאחורי קירות תמך.", prevalence_il: "נדיר יחסית במצבו הטבעי. לרוב מיוצר באופן מלאכותי במחצבות על ידי גריסה וערבוב של אגרגטים בגדלים שונים כדי לעמוד בדרישות התקן (למשל, תקן ישראלי 26 עבור 'מצע סוג א'')." }, 'GP': { properties: ['חוזק בינוני, דורש הידוק טוב', 'חומר טוב למילוי, אך פחות מתאים לשכבות נושאות', 'חדירות גבוהה מאוד'], description: "חצץ מדורג גרוע מורכב בעיקר מגרגרים בגודל אחיד. חוסר בגרגרים קטנים יותר למילוי החללים מקשה על השגת צפיפות גבוהה וחוזק גזירה טוב כמו ב-GW. משמש בעיקר למילוי כללי שאינו נושא עומסים קריטיים.", prevalence_il: "ניתן למצוא במניפות סחף ובאפיקי נחלים גדולים, למשל באזור הערבה ובקעות הנגב." }, 'SW': { properties: ['חוזק טוב כשהוא תחום, התנהגות דומה ל-GW', 'חומר מצוין למילוי הנדסי ומסננים', 'בעל פוטנציאל להתנזלות ברעידות אדמה'], description: "חול מדורג היטב, בדומה ל-GW, הוא חומר מילוי איכותי. מתהדק היטב ומציג חוזק טוב. עם זאת, כאשר הוא רווי במים, הוא עלול להיות רגיש להתנזלות תחת עומסים דינמיים כמו רעידות אדמה.", prevalence_il: "חולות דירוג טוב פחות נפוצים מחולות מדורגים גרוע. ניתן למצוא אותם בקרבת נחלים מסוימים או כתוצר גריסה במחצבות." }, 'SP': { properties: ['יציבות נמוכה, במיוחד תחת רעידות או זעזועים', 'משמש בעיקר כחומר מילוי לא נושא עומס', 'חדירות גבוהה, ניקוז טוב'], description: "חול מדורג גרוע מורכב מגרגרי קוורץ בגודל אחיד. זהו סוג החול הנפוץ ביותר בדיונות. הוא חומר חדיר מאוד וקל יחסית לכרייה, אך בעל חוזק נמוך ודורש אמצעי ייצוב אם משמש לביסוס.", prevalence_il: "נפוץ מאוד לאורך מישור החוף (דיונות חול), וכן באזורים נרחבים בנגב המערבי ובערבה." }, 'SM': { properties: ['תכונות הנדסיות סבירות', 'חומר מילוי נפוץ, אך רגיש לקרה', 'קל יחסית להידוק'], description: "חול טיני (סילטי) הוא תערובת של חול עם כמות משמעותית של דקים לא-פלסטיים (טין). תוספת הטין מקטינה את חדירות הקרקע ומשפרת את הלכידות שלה במצב לח, אך גם הופכת אותה לרגישה לקרה (Frost Heave). קרקעות חמרה הן דוגמה טובה לסיווג זה.", prevalence_il: "נפוץ באזורים רבים בארץ, במיוחד במישור החוף המרכזי והדרומי (חמרה), במישורי הצפה של נחלים ובאזורים בהם יש סחיפה של קרקעות לס מההרים (למשל, שפלת יהודה)." }, 'SC': { properties: ['תערובת עם תכונות של חול וחרסית', 'חומר טוב למילוי מבני וליבות סכרים', 'אטים יחסית, חוזק טוב בהידוק'], description: "חול חרסיתי הוא תערובת של חול עם דקים פלסטיים (חרסית). החרסית פועלת כ'דבק' בין גרגרי החול, ומעניקה לקרקע לכידות וחוזק גבוהים יותר כשהיא מהודקת ברטיבות אופטימלית. חומר זה משמש לעיתים קרובות לליבות של סכרים קטנים ולמילוי מבני.", prevalence_il: "תערובות טבעיות כאלו נמצאות בקרקעות מעבר, בין תצורות חוליות לתצורות חרסיתיות, למשל בשולי עמקים פנימיים." }, 'ML': { properties: ['כושר נשיאה נמוך, דחיסות גבוהה', 'חומר בעייתי לביסוס, רגיש מאוד לקרה', 'שינויי נפח נמוכים יחסית לחרסית'], description: "טין (סילט) בעל פלסטיות נמוכה. הגרגרים דומים בגודלם לחול דק מאוד, אך בעלי צורה שטוחה יותר. קרקעות אלו מציגות חוזק נמוך מאוד כשהן רוויות, דחיסות גבוהה ורגישות גבוהה לקרה. נחשבות לקרקע בעייתית מאוד לביסוס הנדסי.", prevalence_il: "קרקעות לס (Loess) הן דוגמה קלאסית לטין. הן נפוצות מאוד בצפון-מערב הנגב (אזור באר שבע) ובחלקים של שפלת יהודה. כמו כן, ניתן למצוא טין במשקעים אגמיים כמו באזור עמק החולה." }, 'CL': { properties: ['פלסטיות ודחיסות בינונית', 'פוטנציאל תפיחה נמוך-בינוני', 'אטים למים'], description: "חרסית רזה (בעלת פלסטיות נמוכה עד בינונית). קרקע זו מציגה שינויי נפח מתונים יחסית עם שינויים ברטיבות. היא אטימה למים ויכולה לשמש כחומר סביר לביסוס רדוד אם נלקחים בחשבון פתרונות ניקוז מתאימים. משמשת גם לייצור לבנים וקדרות.", prevalence_il: "נפוצה באזורים רבים בשפלה ובהרי המרכז, שם היא נוצרת מבליה של סלעי גיר ודולומיט. קרקעות 'טרה רוסה' הן דוגמה טובה." }, 'MH': { properties: ['דחיסות גבוהה מאוד, חוזק נמוך', 'קרקע בעייתית מאוד לכל שימוש הנדסי', 'דומה לטין אך עם פלסטיות גבוהה'], description: "טין (סילט) בעל פלסטיות גבוהה. זוהי קרקע נדירה יחסית, המשלבת תכונות בעייתיות של טין (חוזק נמוך) וחרסית (פלסטיות גבוהה). לעיתים קרובות, הפלסטיות הגבוהה נובעת מנוכחות של חומר אורגני מיקרוסקופי. קרקע בעייתית מאוד לשימושים הנדסיים.", prevalence_il: "לא נפוצה. עשויה להימצא במשקעים אגמיים או ימיים עתיקים, לעיתים קרובות עם תכולה אורגנית, כמו באזור עמק החולה לפני ייבושו." }, 'CH': { properties: ['פוטנציאל תפיחה והתכווצות גבוה מאוד ("קרקע פעילה")', 'קרקע מסוכנת לביסוס מבנים קלים', 'אטימות גבוהה מאוד'], description: "חרסית שמנה (בעלת פלסטיות גבוהה) היא קרקע המציגה פוטנציאל גבוה מאוד לשינויי נפח (תפיחה והתכווצות) עם שינויים בתכולת הרטיבות. קרקעות אלו אחראיות לנזקים רבים למבנים קלים, מדרכות וכבישים. ביסוס עליהן דורש פתרונות הנדסיים מורכבים ויקרים.", prevalence_il: "נפוצה מאוד בעמקים הפנימיים של ישראל כמו עמק יזרעאל, עמק חרוד ועמק בית שאן. נוצרת מבליה של סלעי בזלת או ממשקעים חרסיתיים עמוקים." }, 'A-1-a': { properties: ['חומר מעולה כבסיס ותת-בסיס לכבישים', 'יציב מאוד, בעל כושר נשיאה גבוה'], description: "מורכב משברי אבן או חצץ עם חול מדורג היטב, עם או בלי מקשר לא-פלסטי. חומר זה, כאשר הוא מהודק היטב, יוצר תשתית יציבה ביותר ועמידה בפני עומסי תנועה כבדים.", prevalence_il: "חומרים העומדים במפרט זה מיוצרים לרוב באופן מבוקר במחצבות ואינם נפוצים בצורתם הטבעית." }, 'A-1-b': { properties: ['חומר מעולה כבסיס ותת-בסיס לכבישים', 'יציב מאוד, בעל כושר נשיאה גבוה'], description: "מורכב מחול וחצץ מדורגים היטב. דומה ל-A-1-a אך עשוי להכיל יותר חול. מספק תשתית יציבה ואיכותית.", prevalence_il: "בדומה ל-A-1-a, לרוב מדובר בחומר מעובד ממחצבה." }, 'A-3': { properties: ['חומר בינוני עד טוב למילוי', 'רגיש לסחיפה (ארוזיה) אם אינו תחום', 'ניקוז טוב'], description: "מורכב בעיקר מחול דק, נקי מדקים טיניים או חרסיתיים. משמש כשכבת מילוי או תשתית באזורים שבהם הוא זמין, אך חוזקו נמוך יחסית לקבוצות A-1/A-2.", prevalence_il: "דומה לחול חופי (SP) וניתן למצוא אותו בדיונות חול לאורך מישור החוף ובנגב." }, 'A-2-4': { properties: ['חומר טוב עד מעולה', 'יציב ובעל כושר נשיאה טוב', 'רגישות נמוכה למים'], description: "תערובת של חצץ וחול עם מקשר טיני (לא-פלסטי או בעל פלסטיות נמוכה). נחשב לחומר תשתית טוב מאוד, יציב ופחות רגיש למים בהשוואה לקבוצות A-4/A-5.", prevalence_il: "נפוץ במישורי סחף, מניפות סחף, ובאזורים עם קרקעות לס וחול." }, 'A-2-5': { properties: ['חומר טוב עד מעולה', 'תכונות דומות ל-A-2-4', 'יציב ובעל כושר נשיאה טוב'], description: "דומה ל-A-2-4, אך עם גבול נזילות מעט גבוה יותר של הדקים. עדיין נחשב לחומר איכותי ויציב למילוי ותשתיות.", prevalence_il: "דומה ל-A-2-4, נמצא באזורים גיאוגרפיים דומים." }, 'A-2-6': { properties: ['חומר טוב עד מעולה', 'הדקים החרסיתיים משפרים את הלכידות', 'קל להידוק'], description: "תערובת של חצץ וחול עם מקשר חרסיתי (בעל פלסטיות). הלכידות שמספקת החרסית הופכת אותו לחומר מצוין למילוי מהודק, אך הוא עשוי להיות רגיש יותר לשינויי רטיבות מאשר A-2-4/A-2-5.", prevalence_il: "נמצא בקרקעות מעבר בין אזורים חוליים לאזורים חרסיתיים, כמו בשולי עמקים." }, 'A-2-7': { properties: ['חומר טוב עד מעולה', 'תכונות דומות ל-A-2-6', 'קל להידוק'], description: "דומה ל-A-2-6, אך עם גבולות פלסטיות גבוהים יותר של המקטע החרסיתי. בעל לכידות טובה אך גם רגישות גבוהה יותר לתפיחה והתכווצות.", prevalence_il: "דומה ל-A-2-6, נמצא באזורים גיאוגרפיים דומים." }, 'A-4': { properties: ['חומר בינוני עד גרוע כתשתית', 'מאבד חוזק במהירות עם העלייה ברטיבות', 'רגיש לקרה'], description: "קרקע המורכבת בעיקר מחלקיקי טין (סילט) עם פלסטיות נמוכה. כושר הנשיאה שלה יורד משמעותית כשהיא נרטבת. נחשבת לחומר גרוע עבור שכבות עליונות של מצעי כביש.", prevalence_il: "קרקעות לס בצפון הנגב ובשפלה הן דוגמה מצוינת לסיווג זה." }, 'A-5': { properties: ['חומר גרוע כתשתית, דחיסות גבוהה', 'רגיש מאוד למים', 'פוטנציאל התנזלות מסוים'], description: "קרקע טינית (סילט) עם גבול נזילות גבוה יותר מאשר A-4. חומר זה דחיס מאוד ובעל חוזק נמוך, במיוחד בהשפעת מים.", prevalence_il: "פחות נפוץ, עשוי להימצא במשקעים אגמיים." }, 'A-6': { properties: ['חומר גרוע, פלסטיות בינונית', 'שינויי נפח משמעותיים עם שינוי ברטיבות', 'כושר נשיאה נמוך כשהיא רטובה'], description: "קרקע חרסיתית עם פלסטיות בינונית. היא מציגה שינויי נפח משמעותיים (תפיחה והתכווצות) ומשמשת כחומר תשתית גרוע.", prevalence_il: "נפוץ בקרקעות טרה רוסה וקרקעות חרסיתיות בשפלה ובהרים." }, 'A-7-5': { properties: ['חומר גרוע, דחיסות ופלסטיות גבוהות', 'פוטנציאל תפיחה גבוה', 'בעייתי מאוד לשימושי דרך'], description: "קרקע חרסיתית עם פלסטיות גבוהה, אך מעט פחות 'פעילה' מ-A-7-6. עדיין נחשבת לחומר בעייתי מאוד עם פוטנציאל תפיחה גבוה.", prevalence_il: "נפוץ בקרקעות חרסיתיות בעמקים (עמק יזרעאל, עמק בית שאן)." }, 'A-7-6': { properties: ['חומר גרוע מאוד, דחיסות ופלסטיות גבוהות', 'פוטנציאל תפיחה גבוה מאוד', 'בעייתי מאוד לשימושי דרך'], description: "הקרקע הבעייתית ביותר לשימושי הנדסה אזרחית. בעלת פוטנציאל התפיחה וההתכווצות הגבוה ביותר. ביסוס עליה דורש תכנון מיוחד.", prevalence_il: "קרקעות החרסית הכבדות והפעילות ביותר, נפוצות בעמקים הפנימיים של ישראל." } };
+    lang.en.soilDetails = { 'GW': { properties: ['High shear strength, good stability', 'Excellent material for subgrade, sub-base, and base courses', 'High permeability'], description: "Well-graded gravel is a premier fill and subbase material. Its wide range of particle sizes allows for high density compaction, creating a strong, stable aggregate skeleton. It is not sensitive to moisture changes and has high permeability, making it excellent for drainage layers, road and railway subbases, and backfill for retaining walls.", prevalence_il: "Relatively rare in its natural state. It is usually produced artificially in quarries by crushing and mixing aggregates of various sizes to meet standard specifications (e.g., for Type-A subbase)." }, 'GP': { properties: ['Moderate strength, requires good compaction', 'Good fill material, but less suitable for load-bearing layers', 'Very high permeability'], description: "Poorly-graded gravel consists mainly of uniform-sized particles. The lack of smaller particles to fill voids makes it difficult to achieve high density and shear strength compared to GW. It is primarily used for general fill that does not bear critical loads.", prevalence_il: "Can be found in alluvial fans and large riverbeds, for example in the Arava region and the Negev valleys." }, 'SW': { properties: ['Good strength when confined', 'Excellent material for engineering fill and filters', 'Potential for liquefaction during earthquakes'], description: "Well-graded sand, similar to GW, is a high-quality fill material. It compacts well and exhibits good strength. However, when saturated, it can be susceptible to liquefaction under dynamic loads such as earthquakes.", prevalence_il: "Well-graded sands are less common than poorly-graded ones. They can be found near certain rivers or as a product of crushing in quarries." }, 'SP': { properties: ['Low stability, especially under vibration', 'Mainly used as non-load-bearing fill', 'High permeability, good drainage'], description: "Poorly-graded sand consists of uniform-sized quartz grains. It is the most common type of sand found in dunes. It is a highly permeable material and relatively easy to excavate, but has low strength and requires stabilization measures if used for foundations.", prevalence_il: "Very common along the coastal plain (sand dunes), as well as in large areas of the western Negev and the Arava." }, 'SM': { properties: ['Fair engineering properties', 'Common fill material, but susceptible to frost', 'Relatively easy to compact'], description: "Silty sand is a mixture of sand with a significant amount of non-plastic fines (silt). The addition of silt reduces the soil's permeability and improves its cohesion when moist, but also makes it susceptible to frost heave. Hamra soils are a good example of this classification.", prevalence_il: "Common in many parts of the country, especially in the central and southern coastal plain (Hamra), in floodplains, and in areas with loess erosion from the mountains (e.g., the Judean Shephelah)." }, 'SC': { properties: ['Mixture with properties of both sand and clay', 'Good material for structural fill and dam cores', 'Relatively impervious, good strength when compacted'], description: "Clayey sand is a mixture of sand with plastic fines (clay). The clay acts as a binder between the sand grains, giving the soil higher cohesion and strength when compacted at optimal moisture content. This material is often used for the cores of small dams and for structural fill.", prevalence_il: "Such natural mixtures are found in transition soils, between sandy and clayey formations, for example at the edges of inland valleys." }, 'ML': { properties: ['Low bearing capacity, high compressibility', 'Problematic foundation material, very frost-susceptible', 'Relatively low volume change compared to clay'], description: "Silt of low plasticity. The grains are similar in size to very fine sand but have a more platy shape. These soils exhibit very low strength when saturated, high compressibility, and high susceptibility to frost. They are considered very problematic for engineering foundations.", prevalence_il: "Loess soils are a classic example of silt. They are very common in the northwestern Negev (Beersheba area) and parts of the Judean Shephelah. Silt can also be found in lacustrine deposits such as in the Hula Valley area." }, 'CL': { properties: ['Medium plasticity and compressibility', 'Low to medium swell potential', 'Impervious to water'], description: "Lean clay (low to medium plasticity). This soil exhibits relatively moderate volume changes with changes in moisture content. It is impervious to water and can be a reasonable material for shallow foundations if proper drainage solutions are considered. It is also used for making bricks and pottery.", prevalence_il: "Common in many areas of the Shephelah and the central mountains, where it is formed from the weathering of limestone and dolomite rocks. 'Terra Rossa' soils are a good example." }, 'MH': { properties: ['Very high compressibility, low strength', 'Very problematic soil for any engineering use', 'Similar to silt but with high plasticity'], description: "Silt of high plasticity. This is a relatively rare soil that combines the problematic properties of silt (low strength) and clay (high plasticity). Often, the high plasticity is due to the presence of microscopic organic matter. It is a very problematic soil for engineering uses.", prevalence_il: "Not common. May be found in ancient lacustrine or marine deposits, often with organic content, such as in the Hula Valley area before it was drained." }, 'CH': { properties: ['Very high swell-shrink potential ("active soil")', 'Hazardous for light structures', 'Very impervious'], description: "Fat clay (high plasticity) is a soil that exhibits a very high potential for volume change (swelling and shrinkage) with changes in moisture content. These soils are responsible for extensive damage to light structures, sidewalks, and roads. Foundations on them require complex and expensive engineering solutions.", prevalence_il: "Very common in the inland valleys of Israel such as the Jezreel Valley, Harod Valley, and Beit She'an Valley. It is formed from the weathering of basalt rocks or from deep clay deposits." }, 'A-1-a': { properties: ['Excellent as base and subbase', 'Very stable, high bearing capacity'], description: "Composed of well-graded stone fragments or gravel with sand, with or without a non-plastic binder. This material, when well-compacted, creates a highly stable foundation resistant to heavy traffic loads.", prevalence_il: "Materials meeting this specification are typically produced under controlled conditions in quarries and are not common in their natural form." }, 'A-1-b': { properties: ['Excellent as base and subbase', 'Very stable, high bearing capacity'], description: "Composed of well-graded sand and gravel. Similar to A-1-a but may contain more sand. Provides a stable and high-quality foundation.", prevalence_il: "Similar to A-1-a, this is usually a processed material from a quarry." }, 'A-3': { properties: ['Fair to good as fill', 'Susceptible to erosion if unconfined', 'Good drainage'], description: "Consists mainly of fine sand, clean of silty or clayey fines. Used as a fill or subbase layer in areas where it is available, but its strength is relatively lower than A-1/A-2 groups.", prevalence_il: "Similar to coastal sand (SP) and can be found in sand dunes along the coastal plain and in the Negev." }, 'A-2-4': { properties: ['Good to excellent material', 'Stable with good bearing capacity', 'Low sensitivity to water'], description: "A mixture of gravel and sand with a silty binder (non-plastic or low plasticity). Considered a very good subbase material, stable and less sensitive to water compared to A-4/A-5 groups.", prevalence_il: "Common in alluvial plains, alluvial fans, and in areas with loess and sand soils." }, 'A-2-5': { properties: ['Good to excellent material', 'Properties similar to A-2-4', 'Stable with good bearing capacity'], description: "Similar to A-2-4, but with a slightly higher liquid limit for the fines. Still considered a high-quality and stable material for fill and subbases.", prevalence_il: "Similar to A-2-4, found in similar geographical areas." }, 'A-2-6': { properties: ['Good to excellent material', 'Clayey fines improve cohesion', 'Easy to compact'], description: "A mixture of gravel and sand with a clayey binder (with plasticity). The cohesion provided by the clay makes it an excellent material for compacted fill, but it may be more sensitive to moisture changes than A-2-4/A-2-5.", prevalence_il: "Found in transition soils between sandy and clayey areas, such as at the edges of valleys." }, 'A-2-7': { properties: ['Good to excellent material', 'Properties similar to A-2-6', 'Easy to compact'], description: "Similar to A-2-6, but with higher plasticity limits for the clay fraction. Has good cohesion but also a higher sensitivity to swelling and shrinkage.", prevalence_il: "Similar to A-2-6, found in similar geographical areas." }, 'A-4': { properties: ['Fair to poor as subgrade', 'Loses strength rapidly with increasing moisture', 'Frost susceptible'], description: "A soil composed mainly of silt particles with low plasticity. Its bearing capacity decreases significantly when wet. Considered a poor material for the upper layers of roadbeds.", prevalence_il: "Loess soils in the northern Negev and the Shephelah are an excellent example of this classification." }, 'A-5': { properties: ['Poor as subgrade, high compressibility', 'Very sensitive to water', 'Some liquefaction potential'], description: "A silty soil with a higher liquid limit than A-4. This material is highly compressible and has low strength, especially under the influence of water.", prevalence_il: "Less common, may be found in lacustrine deposits." }, 'A-6': { properties: ['Poor material, medium plasticity', 'Significant volume changes with moisture change', 'Low bearing capacity when wet'], description: "A clayey soil with medium plasticity. It exhibits significant volume changes (swelling and shrinkage) and serves as a poor subgrade material.", prevalence_il: "Common in Terra Rossa soils and clayey soils in the Shephelah and mountains." }, 'A-7-5': { properties: ['Poor material, high compressibility and plasticity', 'High swell potential', 'Very problematic for road use'], description: "A clayey soil with high plasticity, but slightly less 'active' than A-7-6. Still considered a very problematic material with high swell potential.", prevalence_il: "Common in clayey soils in valleys (Jezreel Valley, Beit She'an Valley)." }, 'A-7-6': { properties: ['Very poor material, high compressibility and plasticity', 'Very high swell potential', 'Extremely problematic for road use'], description: "The most problematic soil for civil engineering uses. Has the highest swelling and shrinkage potential. Foundations on it require special design.", prevalence_il: "The heaviest and most active clay soils, common in the inland valleys of Israel." } };
+
+    const caseStudies = {
+        'sp': { sampleWeight: 1500, LL: 0, PL: 0, sieves: { '4.75': 5, '2.36': 25, '1.18': 150, '0.6': 650, '0.425': 350, '0.3': 180, '0.15': 110, '0.075': 20, '0': 10 } },
+        'ch': { sampleWeight: 800, LL: 65, PL: 25, sieves: { '0.425': 20, '0.15': 60, '0.075': 120, '0': 600 } },
+        'gw': { sampleWeight: 2500, LL: 0, PL: 0, sieves: { '25': 150, '19': 250, '9.5': 600, '4.75': 500, '2.36': 350, '1.18': 280, '0.6': 170, '0.3': 100, '0.15': 60, '0.075': 30, '0': 10 } },
+        'sm': { sampleWeight: 1200, LL: 22, PL: 16, sieves: { '2.36': 10, '1.18': 40, '0.6': 150, '0.425': 250, '0.3': 300, '0.15': 200, '0.075': 150, '0': 100 } },
+        'cl': { sampleWeight: 950, LL: 42, PL: 20, sieves: { '0.425': 30, '0.15': 90, '0.075': 230, '0': 600 } },
+        'loess_ml': { sampleWeight: 1100, LL: 33, PL: 24, sieves: { '0.425': 10, '0.15': 50, '0.075': 240, '0': 800 } },
+        'basalt_ch': { sampleWeight: 900, LL: 75, PL: 30, sieves: { '0.075': 120, '0': 780 } },
+        'kurkar_spsm': { sampleWeight: 1600, LL: 18, PL: 15, sieves: { '4.75': 30, '2.36': 150, '1.18': 300, '0.6': 500, '0.3': 350, '0.15': 120, '0.075': 100, '0': 50 } },
+        'terra_rossa_cl': { sampleWeight: 1000, LL: 45, PL: 22, sieves: { '4.75': 50, '2.36': 70, '0.425': 130, '0.075': 250, '0': 500 } },
+        'alluvium_sc': { sampleWeight: 1400, LL: 30, PL: 15, sieves: { '4.75': 20, '2.36': 180, '1.18': 350, '0.6': 400, '0.3': 200, '0.15': 50, '0.075': 180, '0': 20 } },
+    };
+
+    const $ = (selector) => document.querySelector(selector);
+    const $$ = (selector) => document.querySelectorAll(selector);
+    let currentLang = 'he';
+    let grainSizeChart, plasticityChart, sieveAnimationCtx, proctorChart;
+    let saveTimeout;
+
+    const sieves = [
+        { size: 75, name: '3"' }, { size: 50, name: '2"' }, { size: 37.5, name: '1.5"' }, 
+        { size: 25, name: '1"' }, { size: 19, name: '3/4"' }, 
+        { size: 9.5, name: '3/8"' }, { size: 4.75, name: '#4' }, 
+        { size: 2.36, name: '#8' }, { size: 1.18, name: '#16' }, 
+        { size: 0.6, name: '#30' }, { size: 0.425, name: '#40' }, 
+        { size: 0.3, name: '#50' }, { size: 0.15, name: '#100' }, 
+        { size: 0.075, name: '#200' }, { size: 0, name: 'Pan' }
+    ];
+    // --- END: GLOBAL CONFIGURATION & STATE ---
+
+    // --- START: FUNCTION DEFINITIONS ---
+
+    // UTILITY FUNCTIONS
+    function sanitizeForId(text) {
+        return String(text).replace(/\./g, '_');
+    }
+    
+    function showToast(messageKey) {
+        const toast = $('#toast-notification');
+        toast.textContent = lang[currentLang]?.[messageKey] || messageKey;
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    }
+    
+    // UI & DOM MANIPULATION
+    function createSieveInputs() {
+        const container = $('#sieve-inputs');
+        if (!container) return;
+        container.innerHTML = '';
+        sieves.forEach(sieve => {
+            const sanitizedId = `sieve-${sanitizeForId(sieve.size)}`;
+            const isPan = sieve.name === 'Pan';
+            const labelKey = isPan ? 'pan' : 'retained_on_sieve';
+            const labelText = lang[currentLang]?.[labelKey] || 'Retained on Sieve';
+            const sieveLabel = isPan ? labelText : `${labelText} ${sieve.name} (${sieve.size} mm)`;
+            const div = document.createElement('div');
+            div.className = 'flex items-center space-x-2 rtl:space-x-reverse';
+            div.innerHTML = `<label for="${sanitizedId}" class="w-2/3 text-sm">${sieveLabel}</label><input type="number" min="0" id="${sanitizedId}" data-size="${sieve.size}" class="w-1/3 p-1 text-sm rounded-md input-field">`;
+            container.appendChild(div);
+        });
+        $$('#sieve-inputs input').forEach(input => {
+             input.addEventListener('input', () => {
+                drawSieveAnimation();
+                updateWeightAnimation();
+                scheduleSave();
+            });
+        });
+    }
+
+    function initSieveAnimation() {
+        const container = $('#sieve-animation-canvas-container');
+        if (!container) return;
+        const canvas = $('#sieve-animation-canvas');
+        sieveAnimationCtx = canvas.getContext('2d');
+        const resizeObserver = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                requestAnimationFrame(() => {
+                    canvas.width = entry.contentRect.width;
+                    canvas.height = entry.contentRect.height;
+                    drawSieveAnimation();
+                });
+            }
+        });
+        resizeObserver.observe(container);
+    }
+
+    function drawSieveAnimation() {
+         if (!sieveAnimationCtx || !sieveAnimationCtx.canvas) return;
+        const ctx = sieveAnimationCtx;
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+        ctx.clearRect(0, 0, w, h);
+        const totalSieves = sieves.length - 1;
+        if (totalSieves <= 0) return;
+        const sieveHeight = h / (totalSieves + 1.5);
+        const rimHeight = sieveHeight * 0.2;
+        const isDark = document.documentElement.classList.contains('dark');
+        ctx.strokeStyle = isDark ? '#94a3b8' : '#475569';
+        ctx.font = '10px Assistant';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        sieves.forEach((sieve, i) => {
+            if (sieve.name === 'Pan') return;
+            const y = i * sieveHeight;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(w * 0.1, y, w * 0.8, sieveHeight * 0.8); 
+            ctx.fillStyle = isDark ? '#475569' : '#e2e8f0';
+            ctx.fillRect(w * 0.1, y, w * 0.8, rimHeight);
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = isDark ? '#64748b' : '#9ca3af';
+            ctx.beginPath();
+            for (let j = 1; j < 6; j++) {
+                const lineY = y + rimHeight + (j * (sieveHeight * 0.6) / 6);
+                ctx.moveTo(w * 0.1, lineY);
+                ctx.lineTo(w * 0.9, lineY);
+            }
+            ctx.stroke();
+            ctx.fillStyle = isDark ? '#e2e8f0' : '#1e293b';
+            ctx.fillText(sieve.name, w * 0.95, y + rimHeight / 2);
+        });
+        const panY = totalSieves * sieveHeight;
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = isDark ? '#94a3b8' : '#475569';
+        ctx.fillStyle = isDark ? '#475569' : '#e2e8f0';
+        ctx.strokeRect(w * 0.1, panY, w * 0.8, sieveHeight);
+        ctx.fillRect(w * 0.1, panY, w * 0.8, sieveHeight);
+        ctx.fillStyle = isDark ? '#e2e8f0' : '#1e293b';
+        const panLabel = lang[currentLang]?.pan || 'Pan';
+        ctx.fillText(panLabel, w * 0.95, panY + sieveHeight / 2);
+        const totalWeight = parseFloat($('#sampleWeight').value) || 1;
+        ctx.fillStyle = 'rgba(139, 69, 19, 0.7)';
+        $$('#sieve-inputs input').forEach(input => {
+            const weight = parseFloat(input.value) || 0;
+            const sieveData = sieves.find(s => s.size == input.dataset.size);
+            if (!sieveData) return;
+            const index = sieves.indexOf(sieveData);
+            if (weight > 0 && index !== -1) {
+                const fillRatio = weight / totalWeight;
+                const fillHeight = Math.min(fillRatio * h, sieveHeight * 0.6);
+                let yPos = 0;
+                if(sieveData.name === 'Pan') {
+                    yPos = panY + sieveHeight - fillHeight;
+                } else {
+                    yPos = index * sieveHeight + rimHeight + (sieveHeight*0.6) - fillHeight;
+                }
+                ctx.fillRect(w * 0.1, yPos, w * 0.8, fillHeight);
+            }
+        });
+    }
+    
+    function updateWeightAnimation() {
+        const totalWeight = parseFloat($('#sampleWeight').value) || 0;
+        const retainedSum = Array.from($$('#sieve-inputs input')).reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
+        const remainingWeight = totalWeight - retainedSum;
+        const remainingRatio = totalWeight > 0 ? (remainingWeight / totalWeight) : 0;
+        $('#weight-fill').style.height = `${Math.max(0, remainingRatio * 100)}%`;
+        $('#weight-text').textContent = remainingWeight.toFixed(0);
+    }
+
+    function updatePI() {
+        const ll = parseFloat($('#liquidLimit').value) || 0;
+        const pl = parseFloat($('#plasticLimit').value) || 0;
+        const pi = (ll > pl) ? ll - pl : 0;
+        $('#pi-value').textContent = pi.toFixed(1);
+        const pl_percent = pl > 100 ? 100 : pl;
+        const ll_percent = ll > 100 ? 100 : ll;
+        $('#plastic-range-bar').style.left = `${pl_percent}%`;
+        $('#plastic-range-bar').style.width = `${Math.max(0, ll_percent - pl_percent)}%`;
+    }
+    
+    function toggleTheme() {
+        document.documentElement.classList.toggle('dark');
+        $('#theme-icon-light').classList.toggle('hidden');
+        $('#theme-icon-dark').classList.toggle('hidden');
+        localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        if(grainSizeChart) updateChartTheme(grainSizeChart);
+        if(plasticityChart) updateChartTheme(plasticityChart);
+        if(proctorChart) updateChartTheme(proctorChart);
+    }
+    
+    function toggleLanguage() {
+        currentLang = (currentLang === 'he') ? 'en' : 'he';
+        updateLanguageUI();
+    }
+
+    function updateLanguageUI() {
+        document.documentElement.lang = currentLang;
+        document.documentElement.dir = (currentLang === 'he') ? 'rtl' : 'ltr';
+        $$('[data-lang-key]').forEach(el => {
+            const key = el.dataset.langKey;
+            const translation = lang[currentLang]?.[key] ?? lang['en']?.[key];
+            if (translation) {
+                if (el.tagName === 'INPUT') {
+                     if(el.placeholder) el.placeholder = translation;
+                } else {
+                    el.innerHTML = translation;
+                }
+            }
+        });
+        
+        const select = $('#case-study-select');
+        select.innerHTML = `<option value="">${lang[currentLang].case_study_placeholder}</option>`;
+        Object.keys(caseStudies).forEach(key => {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = lang[currentLang][`case_study_${key}`] || key;
+            select.appendChild(option);
+        });
+
+        createSieveInputs();
+        
+        $$('.info-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                const key = e.currentTarget.dataset.info;
+                let title = lang[currentLang]?.[`${key}_title`] || '';
+                let text = lang[currentLang]?.[`${key}_text`] || '';
+                showSolutionModal(title, [`<p>${text}</p>`]);
+            });
+        });
+
+        if (!$('#results-section').classList.contains('hidden')) {
+            if (!$('#classification-results').classList.contains('hidden')) {
+                handleCalculation(false); // Recalculate without validation
+            }
+            if (!$('#proctor-results').classList.contains('hidden')) {
+                handleProctorCalculation();
+            }
+        }
+        
+        updatePI();
+        updateWeightAnimation();
+        drawSieveAnimation();
+    }
+    
+    function resetForm() {
+        $('#sampleWeight').value = '';
+        $('#liquidLimit').value = '';
+        $('#plasticLimit').value = '';
+        $$('#sieve-inputs input').forEach(input => input.value = '');
+        
+        // Reset Proctor inputs
+        $('#proctor-inputs').innerHTML = `<div class="flex items-center space-x-2 rtl:space-x-reverse font-semibold text-sm"><div class="w-1/2" data-lang-key="proctor_wc_header"></div><div class="w-1/2" data-lang-key="proctor_dry_density_header"></div></div>`;
+        addProctorRow();
+        updateLanguageUI();
+
+        $('#results-section').classList.add('hidden');
+        $('#validation-message').classList.add('hidden');
+        localStorage.removeItem('soilClassifierData');
+        currentResults = {};
+        updatePI();
+        updateWeightAnimation();
+        drawSieveAnimation();
+    }
+
+    function switchTab(event) {
+        const tab = event.currentTarget.dataset.tab;
+        $$('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        
+        if (tab === 'classification') {
+            $('#classification-tab-content').classList.remove('hidden');
+            $('#proctor-tab-content').classList.add('hidden');
+            if ($('#uscs-result-card').innerHTML !== '') {
+                $('#classification-results').classList.remove('hidden');
+                $('#proctor-results').classList.add('hidden');
+                $('#results-section').classList.remove('hidden');
+            } else {
+                 $('#results-section').classList.add('hidden');
+            }
+        } else {
+            $('#classification-tab-content').classList.add('hidden');
+            $('#proctor-tab-content').classList.remove('hidden');
+            if ($('#mdd-result').innerText !== '') {
+                $('#proctor-results').classList.remove('hidden');
+                $('#classification-results').classList.add('hidden');
+                $('#results-section').classList.remove('hidden');
+            } else {
+                 $('#results-section').classList.add('hidden');
+            }
+        }
+    }
+    
+    function showSolutionModal(title, steps) {
+        $('#modal-title').innerText = title;
+        $('#modal-content').innerHTML = steps.join('');
+        $('#solution-modal').classList.remove('hidden');
+        $('#solution-modal').classList.add('flex');
+    }
+
+    function loadCaseStudy(studyName) {
+        if (!studyName) return;
+        const data = caseStudies[studyName];
+        if (!data) return;
+
+        $('#sampleWeight').value = data.sampleWeight;
+        $('#liquidLimit').value = data.LL || '';
+        $('#plasticLimit').value = data.PL || '';
+        $$('#sieve-inputs input').forEach(input => input.value = ''); 
+        for (const [size, weight] of Object.entries(data.sieves)) {
+            const sanitizedId = `sieve-${sanitizeForId(size)}`;
+            const input = $(`#${sanitizedId}`);
+            if(input) input.value = weight;
+        }
+
+        setTimeout(() => {
+            updatePI();
+            updateWeightAnimation();
+            drawSieveAnimation();
+            handleCalculation();
+            $('#case-study-select').value = "";
+        }, 0);
+    }
+    
+    function addProctorRow() {
+        const container = $('#proctor-inputs');
+        const row = document.createElement('div');
+        row.className = 'flex items-center space-x-2 rtl:space-x-reverse';
+        row.innerHTML = `<div class="w-1/2"><input type="number" class="w-full p-1 text-sm rounded-md input-field proctor-wc"></div><div class="w-1/2"><input type="number" class="w-full p-1 text-sm rounded-md input-field proctor-density"></div>`;
+        container.appendChild(row);
+    }
+
+    // LOCAL STORAGE
+    function saveInputsToLocalStorage() {
+        const sieveData = {};
+        $$('#sieve-inputs input').forEach(input => {
+            if(input.value) sieveData[input.dataset.size] = input.value;
+        });
+
+        const formData = {
+            sampleWeight: $('#sampleWeight').value,
+            liquidLimit: $('#liquidLimit').value,
+            plasticLimit: $('#plasticLimit').value,
+            sieves: sieveData,
+        };
+        localStorage.setItem('soilClassifierData', JSON.stringify(formData));
+        showToast('form_saved_toast');
+    }
+
+    function loadInputsFromLocalStorage() {
+        const savedData = localStorage.getItem('soilClassifierData');
+        if (!savedData) return;
+
+        const data = JSON.parse(savedData);
+        $('#sampleWeight').value = data.sampleWeight || '';
+        $('#liquidLimit').value = data.liquidLimit || '';
+        $('#plasticLimit').value = data.plasticLimit || '';
+        
+        if (data.sieves) {
+            for (const [size, weight] of Object.entries(data.sieves)) {
+                const input = $(`#sieve-${sanitizeForId(size)}`);
+                if(input) input.value = weight;
+            }
+        }
+        
+        updatePI();
+        updateWeightAnimation();
+        drawSieveAnimation();
+    }
+    
+    // VALIDATION
+    function validateInputs() {
+        const msgEl = $('#validation-message');
+        msgEl.className = 'p-3 rounded-md text-sm font-semibold hidden';
+        
+        const total = parseFloat($('#sampleWeight').value);
+        const LL = parseFloat($('#liquidLimit').value);
+        const PL = parseFloat($('#plasticLimit').value);
+        const sieveInputs = Array.from($$('#sieve-inputs input'));
+
+        const allInputs = [$('#sampleWeight'), $('#liquidLimit'), $('#plasticLimit'), ...sieveInputs];
+        for (const input of allInputs) {
+            if (parseFloat(input.value) < 0) {
+                showValidationError(msgEl, 'validation_negative_error');
+                return false;
+            }
+        }
+
+        if (PL > LL && LL > 0) {
+            showValidationError(msgEl, 'validation_pl_ll_error');
+            return false;
+        }
+
+        if (!total || total < 400) {
+            showValidationError(msgEl, 'validation_min_weight_error');
+            return false;
+        }
+        
+        const sumRetained = sieveInputs.reduce((sum, el) => sum + (parseFloat(el.value) || 0), 0);
+        const diff = Math.abs(total - sumRetained);
+        const diffPercent = (total > 0) ? (diff / total) * 100 : 0;
+        
+        if (diffPercent > 5) {
+            showValidationError(msgEl, 'validation_error');
+            return false;
+        }
+        if (diffPercent > 1) {
+            msgEl.textContent = (lang[currentLang]?.validation_warning || '').replace('{diff}', diffPercent.toFixed(1));
+            msgEl.classList.add('bg-yellow-100', 'text-yellow-800', 'dark:bg-yellow-900', 'dark:text-yellow-200');
+            msgEl.classList.remove('hidden');
+        } else {
+            msgEl.classList.add('hidden');
+        }
+        return true;
+    }
+
+    function showValidationError(element, messageKey) {
+        element.textContent = lang[currentLang]?.[messageKey] || 'Validation Error';
+        element.classList.add('bg-red-200', 'text-red-800', 'dark:bg-red-900', 'dark:text-red-200');
+        element.classList.remove('hidden');
+    }
+    
+    // CORE CALCULATION
+    function handleCalculation(runValidation = true) {
+        if (runValidation && !validateInputs()) {
+            $('#results-section').classList.add('hidden');
+            currentResults = {}; // Clear results on validation fail
+            return;
+        };
+
+        const sampleWeight = parseFloat($('#sampleWeight').value) || 0;
+        const LL = parseFloat($('#liquidLimit').value) || 0;
+        const PL = parseFloat($('#plasticLimit').value) || 0;
+        const sieveInputs = Array.from($$('#sieve-inputs input'));
+
+        let cumulativeRetained = 0;
+        const processedData = sieves.map(sieveInfo => {
+            const input = sieveInputs.find(i => parseFloat(i.dataset.size) === sieveInfo.size);
+            const retained = input ? (parseFloat(input.value) || 0) : 0;
+            cumulativeRetained += retained;
+            const cumRetainedPercent = (sampleWeight > 0) ? (cumulativeRetained / sampleWeight) * 100 : 0;
+            const passingPercent = 100 - cumRetainedPercent;
+            return { size: sieveInfo.size, name: sieveInfo.name, retained, cumulativeRetained, 
+                     cumRetainedPercent: parseFloat(cumRetainedPercent.toFixed(2)), 
+                     passingPercent: parseFloat(passingPercent.toFixed(2)) };
+        });
+        const getPassingPercent = (sieveSize) => processedData.find(s => s.size === sieveSize)?.passingPercent ?? 100;
+        const fines = getPassingPercent(0.075), passing4 = getPassingPercent(4.75);
+        const coarse = 100 - fines, gravel = 100 - passing4, sand = coarse - gravel;
+        const PI = LL > PL ? LL - PL : 0;
+        const D60 = interpolateD(processedData, 60), D30 = interpolateD(processedData, 30), D10 = interpolateD(processedData, 10);
+        const Cu = (D10 > 0) ? D60 / D10 : 0, Cc = (D10 > 0 && D60 > 0) ? (D30 * D30) / (D10 * D60) : 0;
+        const uscsResult = classifyUSCS({ fines, sand, gravel, LL, PL, PI, Cu, Cc });
+        const aashtoResult = classifyAASHTO({ P200: fines, P40: getPassingPercent(0.425), P10: getPassingPercent(2.36), LL, PI }); 
+        
+        // Store results globally for PDF export
+        currentResults = { uscs: uscsResult, aashto: aashtoResult, processedData };
+
+        $('#classification-results').classList.remove('hidden');
+        $('#proctor-results').classList.add('hidden');
+
+        renderTable(processedData);
+        renderClassificationCard('uscs-result-card', uscsResult, 'USCS');
+        renderClassificationCard('aashto-result-card', aashtoResult, 'AASHTO');
+        renderGrainSizeChart(processedData, {D10, D30, D60});
+        renderPlasticityChart(LL, PI);
+        renderCoefficients(Cu, Cc, D10, D30, D60);
+        $('#results-section').classList.remove('hidden');
+    }
+
+    function handleProctorCalculation() {
+        const wcInputs = $$('.proctor-wc');
+        const densityInputs = $$('.proctor-density');
+        const dataPoints = [];
+        let maxDensity = 0;
+        let omc = 0;
+
+        for (let i = 0; i < wcInputs.length; i++) {
+            const wc = parseFloat(wcInputs[i].value);
+            const density = parseFloat(densityInputs[i].value);
+            if (!isNaN(wc) && !isNaN(density)) {
+                dataPoints.push({ x: wc, y: density });
+                if (density > maxDensity) {
+                    maxDensity = density;
+                    omc = wc;
+                }
+            }
+        }
+
+        if (dataPoints.length < 3) {
+            alert(lang[currentLang].proctor_min_points_error);
+            return;
+        }
+        
+        $('#results-section').classList.remove('hidden');
+        $('#proctor-results').classList.remove('hidden');
+        $('#classification-results').classList.add('hidden');
+        
+        $('#omc-result').textContent = `${omc.toFixed(1)} %`;
+        $('#mdd-result').textContent = `${maxDensity.toFixed(0)} kg/m³`;
+        
+        renderProctorChart(dataPoints, {omc, maxDensity});
+    }
+
+    function classifyUSCS({ fines, sand, gravel, LL, PL, PI, Cu, Cc }) {
+        let symbol, name, solutionSteps = [];
+        solutionSteps.push(`<h3>שלב 1: פרמטרים התחלתיים</h3><p>ראשית, נחשב את הפרמטרים הבסיסיים מהנתונים שהוזנו:</p><ul><li><b>אחוז עובר נפה #200 (דקים):</b> F = ${fines.toFixed(1)}%</li><li><b>אחוז חול:</b> S = ${sand.toFixed(1)}%</li><li><b>אחוז חצץ:</b> G = ${gravel.toFixed(1)}%</li><li><b>גבול נזילות (LL):</b> ${LL}</li><li><b>אינדקס פלסטיות (PI):</b> ${PI.toFixed(1)}</li><li><b>מקדמי דירוג:</b><br> C<sub>u</sub> = D<sub>60</sub> / D<sub>10</sub> = ${Cu.toFixed(2)} <br> C<sub>c</sub> = (D<sub>30</sub>)<sup>2</sup> / (D<sub>10</sub> * D<sub>60</sub>) = ${Cc.toFixed(2)}</li></ul>`);
+        if (fines >= 50) {
+            solutionSteps.push(`<h3>שלב 2: סיווג ראשוני - קרקע דקת-גרגר</h3><p>כיוון שאחוז הדקים (${fines.toFixed(1)}%) גדול או שווה ל-50%, הקרקע מסווגת כקרקע <b>דקת-גרגר</b>. המיון ייקבע לפי דיאגרמת הפלסטיות.</p>`);
+            const A_line = 0.73 * (LL - 20);
+            solutionSteps.push(`<h3>שלב 3: מיקום בדיאגרמת הפלסטיות</h3><p>נחשב את ערך ה-PI של קו A עבור ה-LL הנתון: PI(A-line) = 0.73 * (${LL} - 20) = ${A_line.toFixed(1)}. כעת נשווה את ה-PI של הקרקע (${PI.toFixed(1)}) לערך זה.</p>`);
+            if (LL < 50) {
+                solutionSteps.push(`<p>כיוון ש-LL (${LL}) נמוך מ-50, הקרקע בעלת <b>פלסטיות נמוכה</b> (L).</p>`);
+                if (PI > A_line && PI >= 4) { symbol = 'CL'; name = 'Lean Clay'; } else { symbol = 'ML'; name = 'Silt'; }
+                 solutionSteps.push(`<p>ה-PI של הקרקע (${PI.toFixed(1)}) נמצא ${PI > A_line ? 'מעל' : 'מתחת'} לקו A. לכן, הסיווג הסופי הוא <b>${symbol}</b>.</p>`);
+            } else {
+                solutionSteps.push(`<p>כיוון ש-LL (${LL}) גדול או שווה ל-50, הקרקע בעלת <b>פלסטיות גבוהה</b> (H).</p>`);
+                if (PI > A_line) { symbol = 'CH'; name = 'Fat Clay'; } else { symbol = 'MH'; name = 'Elastic Silt'; }
+                solutionSteps.push(`<p>ה-PI של הקרקע (${PI.toFixed(1)}) נמצא ${PI > A_line ? 'מעל' : 'מתחת'} לקו A. לכן, הסיווג הסופי הוא <b>${symbol}</b>.</p>`);
+            }
+        } else {
+            solutionSteps.push(`<h3>שלב 2: סיווג ראשוני - קרקע גסת-גרגר</h3><p>כיוון שאחוז הדקים (${fines.toFixed(1)}%) קטן מ-50%, הקרקע מסווגת כקרקע <b>גסת-גרגר</b>.</p>`);
+            if (gravel >= sand) {
+                solutionSteps.push(`<h3>שלב 3: קביעת סוג הקרקע הגסה</h3><p>אחוז החצץ (${gravel.toFixed(1)}%) גדול מאחוז החול (${sand.toFixed(1)}%), לכן זוהי קרקע <b>חצצית (Gravel)</b>.</p>`);
+                if (fines < 5) {
+                    solutionSteps.push(`<h4>שלב 4: בחינת כמות הדקים - חצץ נקי</h4><p>אחוז הדקים (${fines.toFixed(1)}%) קטן מ-5%, לכן זהו חצץ נקי. נבדוק את טיב הדירוג.</p>`);
+                    if (Cu >= 4 && Cc >= 1 && Cc <= 3) { symbol = 'GW'; name = 'Well-graded gravel'; solutionSteps.push(`<p>מקדמי הדירוג (C<sub>u</sub>=${Cu.toFixed(2)} ≥ 4 ו- 1 ≤ C<sub>c</sub>=${Cc.toFixed(2)} ≤ 3) עומדים בקריטריון לחצץ מדורג היטב. סיווג: <b>GW</b>.</p>`); } 
+                    else { symbol = 'GP'; name = 'Poorly-graded gravel'; solutionSteps.push(`<p>מקדמי הדירוג אינם עומדים בקריטריון לחצץ מדורג היטב. סיווג: <b>GP</b>.</p>`); }
+                } else if (fines > 12) {
+                     solutionSteps.push(`<h4>שלב 4: בחינת כמות הדקים - חצץ עם דקים</h4><p>אחוז הדקים (${fines.toFixed(1)}%) גדול מ-12%. נסווג את הדקים לפי דיאגרמת הפלסטיות.</p>`);
+                    const A_line = 0.73 * (LL - 20);
+                    if (PI > A_line && PI >= 4) { symbol = 'GC'; name = 'Clayey gravel'; } else { symbol = 'GM'; name = 'Silty gravel'; }
+                     solutionSteps.push(`<p>הדקים הם מסוג ${symbol.slice(-1) === 'C' ? 'חרסיתי' : 'טיני'}. סיווג סופי: <b>${symbol}</b>.</p>`);
+                } else {
+                    solutionSteps.push(`<h4>שלב 4: בחינת כמות הדקים - מקרה גבולי</h4><p>אחוז הדקים (${fines.toFixed(1)}%) הוא בין 5% ל-12%, לכן נדרש סיווג כפול.</p>`);
+                    let firstPart = (Cu >= 4 && Cc >= 1 && Cc <= 3) ? 'GW' : 'GP';
+                    let secondPart = (PI > 0.73 * (LL - 20) && PI >=4) ? 'GC' : 'GM';
+                    symbol = `${firstPart}-${secondPart}`; name = `${lang[currentLang]['Well-graded gravel']} with ${secondPart.slice(-1) === 'C' ? 'clay' : 'silt'}`;
+                    solutionSteps.push(`<p>הסיווג הכפול משלב את טיב הדירוג (${firstPart}) ואת סוג הדקים (${secondPart}). סיווג סופי: <b>${symbol}</b>.</p>`);
+                }
+            } else { 
+                 solutionSteps.push(`<h3>שלב 3: קביעת סוג הקרקע הגסה</h3><p>אחוז החול (${sand.toFixed(1)}%) גדול מאחוז החצץ (${gravel.toFixed(1)}%), לכן זוהי קרקע <b>חולית (Sand)</b>.</p>`);
+                 if (fines < 5) {
+                    solutionSteps.push(`<h4>שלב 4: בחינת כמות הדקים - חול נקי</h4><p>אחוז הדקים (${fines.toFixed(1)}%) קטן מ-5%. נבדוק את טיב הדירוג.</p>`);
+                    if (Cu >= 6 && Cc >= 1 && Cc <= 3) { symbol = 'SW'; name = 'Well-graded sand'; solutionSteps.push(`<p>מקדמי הדירוג (C<sub>u</sub>=${Cu.toFixed(2)} ≥ 6 ו- 1 ≤ C<sub>c</sub>=${Cc.toFixed(2)} ≤ 3) עומדים בקריטריון לחול מדורג היטב. סיווג: <b>SW</b>.</p>`);} 
+                    else { symbol = 'SP'; name = 'Poorly-graded sand'; solutionSteps.push(`<p>מקדמי הדירוג אינם עומדים בקריטריון לחול מדורג היטב. סיווג: <b>SP</b>.</p>`); }
+                } else if (fines > 12) {
+                    solutionSteps.push(`<h4>שלב 4: בחינת כמות הדקים - חול עם דקים</h4><p>אחוז הדקים (${fines.toFixed(1)}%) גדול מ-12%. נסווג את הדקים.</p>`);
+                    const A_line = 0.73 * (LL - 20);
+                    if (PI > A_line && PI >= 4) { symbol = 'SC'; name = 'Clayey sand'; } else { symbol = 'SM'; name = 'Silty sand'; }
+                     solutionSteps.push(`<p>הדקים הם מסוג ${symbol.slice(-1) === 'C' ? 'חרסיתי' : 'טיני'}. סיווג סופי: <b>${symbol}</b>.</p>`);
+                } else {
+                    solutionSteps.push(`<h4>שלב 4: בחינת כמות הדקים - מקרה גבולי</h4><p>אחוז הדקים (${fines.toFixed(1)}%) הוא בין 5% ל-12% - נדרש סיווג כפול.</p>`);
+                    let firstPart = (Cu >= 6 && Cc >= 1 && Cc <= 3) ? 'SW' : 'SP';
+                    let secondPart = (PI > 0.73 * (LL - 20) && PI >=4) ? 'SC' : 'SM';
+                    symbol = `${firstPart}-${secondPart}`; name = `${lang[currentLang]['Well-graded sand']} with ${secondPart.slice(-1) === 'C' ? 'clay' : 'silt'}`;
+                    solutionSteps.push(`<p>הסיווג הכפול משלב את טיב הדירוג (${firstPart}) ואת סוג הדקים (${secondPart}). סיווג סופי: <b>${symbol}</b>.</p>`);
+                }
+            }
+        }
+        return { symbol, name, solutionSteps };
+    }
+    
+    function classifyAASHTO({ P200, P40, P10, LL, PI }) {
+        let symbol, name, solutionSteps = [];
+        solutionSteps.push(`<h3>שלב 1: פרמטרים התחלתיים</h3><p>חישוב הפרמטרים הרלוונטיים לשיטת AASHTO:</p><ul><li><b>% עובר #200 (0.075mm):</b> ${P200.toFixed(1)}%</li><li><b>% עובר #40 (0.425mm):</b> ${P40.toFixed(1)}%</li><li><b>% עובר #10 (2.0mm):</b> ${P10.toFixed(1)}%</li><li><b>גבול נזילות (LL):</b> ${LL}</li><li><b>אינדקס פלסטיות (PI):</b> ${PI.toFixed(1)}</li></ul>`);
+        if (P200 <= 35) {
+            solutionSteps.push(`<h3>שלב 2: סיווג ראשוני - חומרים גרגריים</h3><p>כיוון שאחוז העובר נפה #200 (${P200.toFixed(1)}%) קטן או שווה ל-35%, הקרקע היא חומר גרגרי. נבדוק את הקבוצות A-1, A-3, A-2 לפי הסדר.</p>`);
+            if (P10 <= 50 && P40 <= 30 && P200 <= 15 && PI <= 6) { return { symbol: 'A-1-a', name: 'Stone fragments, gravel and sand', solutionSteps }; }
+            if (P40 <= 50 && P200 <= 25 && PI <= 6) { return { symbol: 'A-1-b', name: 'Stone fragments, gravel and sand', solutionSteps }; }
+            if (P40 >= 51 && P200 <= 10 && (PI <= 0 || isNaN(PI))) { return { symbol: 'A-3', name: 'Fine sand', solutionSteps }; }
+            solutionSteps.push(`<p>הקרקע לא עונה על דרישות A-1 או A-3. לכן, היא שייכת לקבוצת <b>A-2</b>.</p>`);
+            const GI = 0.01 * (P200 - 15) * (PI - 10);
+            let subGroup = 'A-2-4';
+            if (LL <= 40 && PI <= 10) { subGroup = 'A-2-4'; } else if (LL >= 41 && PI <= 10) { subGroup = 'A-2-5'; } else if (LL <= 40 && PI >= 11) { subGroup = 'A-2-6'; } else if (LL >= 41 && PI >= 11) { subGroup = 'A-2-7'; }
+            solutionSteps.push(`<h3>שלב 3: סיווג תת-קבוצה וחישוב Group Index</h3><p>על פי ערכי LL ו-PI, הקרקע מתאימה לתת-קבוצה <b>${subGroup}</b>.</p><p>מדד הקבוצה (GI) מחושב כדי להעריך את איכות הקרקע כתשתית. GI = 0.01(F-15)(I<sub>p</sub>-10) = ${GI.toFixed(2)}. הערך הסופי הוא ${Math.max(0, Math.round(GI))}.</p>`);
+            return { symbol: `${subGroup} (${Math.max(0, Math.round(GI))})`, name: 'Silty or clayey gravel and sand', solutionSteps };
+        } else {
+            solutionSteps.push(`<h3>שלב 2: סיווג ראשוני - חומרי טין-חרסית</h3><p>כיוון שאחוז העובר נפה #200 (${P200.toFixed(1)}%) גדול מ-35%, הקרקע היא חומר טין-חרסית. נבדוק את הקבוצות A-4, A-5, A-6, A-7.</p>`);
+            const GI = (P200 - 35) * (0.2 + 0.005 * (LL - 40)) + 0.01 * (P200 - 15) * (PI - 10);
+            if (LL <= 40 && PI <= 10) { symbol = 'A-4'; name = 'Silty soils'; } else if (LL >= 41 && PI <= 10) { symbol = 'A-5'; name = 'Silty soils'; } else if (LL <= 40 && PI >= 11) { symbol = 'A-6'; name = 'Clayey soils'; } else if (LL >= 41 && PI >= 11) { if (PI <= LL - 30) { symbol = 'A-7-5'; } else { symbol = 'A-7-6'; } name = 'Clayey soils'; }
+            solutionSteps.push(`<h3>שלב 3: סיווג קבוצה וחישוב Group Index</h3><p>על פי ערכי LL ו-PI, הקרקע מתאימה לקבוצה <b>${symbol}</b>.</p><p>מדד הקבוצה (GI) מחושב. GI = ${GI.toFixed(2)}. הערך הסופי הוא ${Math.max(0, Math.round(GI))}.</p>`);
+            return { symbol: `${symbol} (${Math.max(0, Math.round(GI))})`, name, solutionSteps };
+        }
+    }
+    
+    function interpolateD(data, percentage) {
+        let p1 = null, p2 = null;
+        const sortedData = [...data].sort((a,b) => a.passingPercent - b.passingPercent);
+        for (let i = 0; i < sortedData.length - 1; i++) {
+            if (sortedData[i].passingPercent <= percentage && sortedData[i+1].passingPercent >= percentage) {
+                p1 = sortedData[i]; p2 = sortedData[i+1]; break;
+            }
+        }
+        if (!p1 || !p2 || p1.passingPercent === p2.passingPercent || p1.size <= 0 || p2.size <=0) return 0;
+        const logD1 = Math.log10(p1.size), logD2 = Math.log10(p2.size);
+        const P1 = p1.passingPercent, P2 = p2.passingPercent;
+        const logD = logD1 + (logD2 - logD1) * ((percentage - P1) / (P2 - P1));
+        return Math.pow(10, logD);
+    }
+
+    // RENDERING FUNCTIONS
+    function renderTable(data) {
+        const tableBody = $('#results-table-body');
+        if(!tableBody) return;
+        tableBody.innerHTML = '';
+        data.forEach(item => {
+            const sieveName = item.size === 0 ? (lang[currentLang]?.pan || 'Pan') : (item.name || item.size);
+            const tr = document.createElement('tr');
+            tr.className = "border-b dark:border-slate-700";
+            tr.innerHTML = `<td class="p-2">${sieveName} (${item.size} mm)</td><td class="p-2">${item.retained}</td><td class="p-2">${item.cumulativeRetained.toFixed(2)}</td><td class="p-2">${item.cumRetainedPercent.toFixed(2)}%</td><td class="p-2 font-bold">${Math.max(0, item.passingPercent).toFixed(2)}%</td>`;
+            tableBody.appendChild(tr);
+        });
+    }
+    
+    function renderGrainSizeChart(data, {D10, D30, D60}) {
+        const chartData = data.filter(d => d.size > 0).map(d => ({ x: d.size, y: d.passingPercent }));
+        chartData.unshift({ x: 100, y: 100});
+        const ctx = $('#grainSizeChart').getContext('2d');
+        if (grainSizeChart) grainSizeChart.destroy();
+        const sieveNames = { '75': '3"', '50': '2"', '37.5': '1.5"', '25': '1"', '19': '3/4"', '9.5': '3/8"', '4.75': '#4', '2.36': '#8', '1.18': '#16', '0.6': '#30', '0.425': '#40', '0.3': '#50', '0.15': '#100', '0.075': '#200' };
+        const logTickValues = Object.keys(sieveNames).map(parseFloat).concat([0.01, 0.1, 1, 10, 100]).sort((a,b) => b-a);
+        const majorTicks = [0.075, 4.75, 75];
+        const pointAnnotations = {};
+        if (D10 > 0) pointAnnotations.d10 = {type:'point', xValue:D10, yValue:10, backgroundColor:'red', radius:5, label:{content:'D10',enabled:true, position: 'start'}};
+        if (D30 > 0) pointAnnotations.d30 = {type:'point', xValue:D30, yValue:30, backgroundColor:'orange', radius:5, label:{content:'D30',enabled:true, position: 'start'}};
+        if (D60 > 0) pointAnnotations.d60 = {type:'point', xValue:D60, yValue:60, backgroundColor:'green', radius:5, label:{content:'D60',enabled:true, position: 'start'}};
+        grainSizeChart = new Chart(ctx, { type: 'line', data: { datasets: [{ data: chartData, borderColor: '#3b82f6', showLine: true, tension: 0.4, pointBackgroundColor: '#3b82f6', pointRadius: 3 }] },
+            options: { responsive: true, maintainAspectRatio: false, 
+                plugins: { 
+                    legend: { display: false }, 
+                    tooltip: { callbacks: { label: (c) => `(${c.parsed.x.toFixed(3)} mm, ${c.parsed.y.toFixed(2)}%)` } }, 
+                    annotation: { annotations: pointAnnotations },
+                    zoom: {
+                        pan: { enabled: true, mode: 'x' },
+                        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
+                        limits: { x: { min: 0.01, max: 200 } }
+                    }
+                },
+                scales: {
+                    x: { type: 'logarithmic', reverse: true, min: 0.01, max: 100, title: { display: true, text: (lang[currentLang]?.sieve_size || 'Grain Size (mm)') },
+                        ticks: { callback: (v) => logTickValues.find(t => Math.abs(t-v)<t*0.01) ? Number(v.toPrecision(3)) : '', autoSkip: false, maxRotation: 90, minRotation: 90 },
+                        grid: { color: (c) => majorTicks.includes(c.tick.value)?'rgba(0,0,0,0.4)':'rgba(0,0,0,0.1)', lineWidth: (c) => majorTicks.includes(c.tick.value)?1.5:0.5 }
+                    },
+                    x2: { position: 'top', type: 'logarithmic', reverse: true, min: 0.01, max: 100, title: { display: true, text: lang[currentLang]?.pan || 'Sieve No.' }, grid: { drawOnChartArea: false }, ticks: { callback: (v) => sieveNames[v.toPrecision(3)] || '', autoSkip: false } },
+                    y: { min: 0, max: 100, title: { display: true, text: (lang[currentLang]?.passing_percent || '% Passing') }, ticks: { stepSize: 10 } },
+                    y2: { position: 'right', min: 0, max: 100, reverse: true, title: { display: true, text: (lang[currentLang]?.retained_percent || '% Retained') }, ticks: { stepSize: 10 }, grid: { drawOnChartArea: false } }
+                }
+            }
+        });
+        updateChartTheme(grainSizeChart);
+    }
+    
+    function renderPlasticityChart(ll, pi) {
+        const ctx = $('#plasticityChart').getContext('2d');
+        if (plasticityChart) {
+            plasticityChart.destroy();
+        }
+
+        const aLineData1 = [{x: 0, y: 7}, {x: 30, y: 7}];
+        const aLineData2 = [{x: 30, y: 7}, {x: 100, y: 59.5}];
+        const uLineData = [];
+        for (let l = 8; l <= 100; l++) {
+            uLineData.push({x: l, y: 0.9 * (l - 8)});
+        }
+        
+        plasticityChart = new Chart(ctx, {
+            type: 'line', 
+            data: {
+                datasets: [
+                    { label: 'A-Line', data: aLineData1, borderColor: 'rgba(239, 68, 68, 0.8)', borderWidth: 2, pointRadius: 0, fill: false, tension: 0 },
+                    { label: 'A-Line Segment 2', data: aLineData2, borderColor: 'rgba(239, 68, 68, 0.8)', borderWidth: 2, pointRadius: 0, fill: false, tension: 0 },
+                    { label: 'U-Line', data: uLineData, borderColor: 'rgba(245, 158, 11, 0.6)', borderWidth: 2, pointRadius: 0, fill: false, borderDash: [10, 5], tension: 0 },
+                    { type: 'scatter', label: 'Soil', data: [{x: ll, y: pi}], backgroundColor: 'rgba(59, 130, 246, 1)', pointRadius: 8, pointHoverRadius: 10 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            filter: (legendItem) => legendItem.text && !legendItem.text.includes('Segment')
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (c) => `Soil: (LL=${c.parsed.x}, PI=${c.parsed.y})`
+                        }
+                    },
+                    zoom: {
+                        pan: { enabled: true, mode: 'xy' },
+                        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy' },
+                        limits: { x: {min: 0, max: 100}, y: {min: 0, max: 70} }
+                    }
+                },
+                scales: {
+                    x: { type: 'linear', min: 0, max: 100, title: { display: true, text: 'Liquid Limit (LL)' } },
+                    y: { type: 'linear', min: 0, max: 70, title: { display: true, text: 'Plasticity Index (PI)' } }
+                }
+            }
+        });
+        updateChartTheme(plasticityChart);
+    }
+
+
+    function renderProctorChart(data, {omc, maxDensity}) {
+        const ctx = $('#proctorChart').getContext('2d');
+        if (proctorChart) proctorChart.destroy();
+        
+        data.sort((a, b) => a.x - b.x);
+
+        proctorChart = new Chart(ctx, {
+            type: 'scatter',
+            data: { datasets: [{ data: data, backgroundColor: '#3b82f6', borderColor: '#3b82f6', showLine: true, tension: 0.4 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: (c) => `(WC: ${c.parsed.x}%, γd: ${c.parsed.y} kg/m³)` } },
+                    annotation: {
+                        annotations: {
+                            peak: { type: 'point', xValue: omc, yValue: maxDensity, backgroundColor: 'red', radius: 7, label: { content: `OMC: ${omc.toFixed(1)}%, MDD: ${maxDensity.toFixed(0)}`, enabled: true, position: 'start', yAdjust: -15 } }
+                        }
+                    },
+                    zoom: {
+                        pan: { enabled: true, mode: 'xy' },
+                        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy' },
+                    }
+                },
+                scales: {
+                    x: { type: 'linear', title: { display: true, text: lang[currentLang]?.proctor_wc_header.split('<')[0] } },
+                    y: { type: 'linear', title: { display: true, text: lang[currentLang]?.proctor_dry_density_header.split('<')[0] } }
+                }
+            }
+        });
+        updateChartTheme(proctorChart);
+    }
+
+    function renderCoefficients(cu, cc, d10, d30, d60) {
+        const container = $('#coefficients-display');
+        if (!container) return;
+        container.innerHTML = `
+        <div class="grid grid-cols-2 gap-4" dir="ltr">
+            <div class="text-left">
+                <h4 class="font-bold">C<sub>u</sub></h4>
+                <p class="font-mono"> = ${d60.toFixed(2)} / ${d10.toFixed(2)} = <b class="text-lg">${cu.toFixed(2)}</b></p>
+            </div>
+            <div class="text-left">
+                <h4 class="font-bold">C<sub>c</sub></h4>
+                <p class="font-mono"> = (${d30.toFixed(2)})<sup>2</sup> / (${d10.toFixed(2)}*${d60.toFixed(2)}) = <b class="text-lg">${cc.toFixed(2)}</b></p>
+            </div>
+        </div>`;
+    }
+
+    function renderClassificationCard(elementId, result, system) {
+        const card = $(`#${elementId}`);
+        const titleKey = system === 'USCS' ? 'uscs_classification' : 'aashto_classification';
+        const soilName = lang[currentLang]?.[result.name] || result.name || result.name;
+
+        let symbolBase = result.symbol;
+        if (system === 'AASHTO') {
+            symbolBase = symbolBase.replace(/ \(.*/, '').trim(); 
+        } else { 
+            symbolBase = symbolBase.split('-')[0]; 
+        }
+        
+        const details = lang[currentLang].soilDetails[symbolBase];
+        const properties = details?.properties || [];
+
+        card.innerHTML = `
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 class="text-lg font-bold" data-lang-key="${titleKey}">${lang[currentLang]?.[titleKey]}</h3>
+                    <p><strong data-lang-key="classification">${lang[currentLang]?.classification}:</strong> <span class="font-mono text-xl font-bold text-blue-500 dark:text-blue-400">${result.symbol}</span></p>
+                    <p><strong data-lang-key="soil_name">${lang[currentLang]?.soil_name}:</strong> ${soilName}</p>
+                </div>
+            </div>
+            <div>
+                <strong data-lang-key="engineering_properties">${lang[currentLang].engineering_properties}</strong>
+                <ul class="list-disc mt-1 space-y-1 text-sm">${properties.map(p => `<li>${p}</li>`).join('')}</ul>
+            </div>
+            <div class="mt-2 space-x-2 rtl:space-x-reverse">
+                <button class="solution-btn text-sm text-blue-600 hover:underline" data-system="${system}" data-type="solution">${lang[currentLang]?.show_solution}</button>
+                <button class="solution-btn text-sm text-green-600 hover:underline" data-system="${system}" data-type="info" data-symbol="${symbolBase}">${lang[currentLang]?.expand_soil_info}</button>
+            </div>`;
+        card.querySelectorAll('.solution-btn').forEach(btn => btn.addEventListener('click', (e) => {
+            const type = e.currentTarget.dataset.type;
+            if (type === 'solution') {
+                showSolutionModal(lang[currentLang]?.[`${system.toLowerCase()}_solution_title`], result.solutionSteps.map(step => `<div>${step}</div>`));
+            } else {
+                const infoDetails = lang[currentLang]?.soilDetails?.[symbolBase];
+                const content = infoDetails ? [`<h3>${soilName} (${symbolBase})</h3><p>${infoDetails.description}</p>`, `<h3>${lang[currentLang].soil_prevalence_title}</h3><p>${infoDetails.prevalence_il}</p>`] : ["מידע לא זמין."];
+                showSolutionModal(lang[currentLang].soil_info_title, content);
+            }
+        }));
+    }
+
+    function updateChartTheme(chart) {
+        if (!chart) return;
+        const isDark = document.documentElement.classList.contains('dark');
+        const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+        const textColor = isDark ? '#e2e8f0' : '#1e293b';
+        Object.values(chart.options.scales).forEach(scale => {
+            if (scale.title) scale.title.color = textColor;
+            if (scale.grid) scale.grid.color = gridColor;
+            if (scale.ticks) scale.ticks.color = textColor;
+        });
+        if (chart.options.plugins.legend) chart.options.plugins.legend.labels.color = textColor;
+        if (chart.options.plugins.annotation) {
+            Object.values(chart.options.plugins.annotation.annotations).forEach(ann => {
+                if (ann.color) ann.color = textColor;
+            });
+        }
+        chart.update();
+    }
+    
+    // PDF EXPORT
+    async function exportToPDF() {
+        if (Object.keys(currentResults).length === 0) {
+            alert("יש לחשב את התוצאות תחילה.");
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'pt', 'a4');
+        
+        const isDark = document.documentElement.classList.contains('dark');
+        if (isDark) document.documentElement.classList.remove('dark');
+        
+        // Ensure charts are fully rendered before capturing
+        await new Promise(resolve => setTimeout(resolve, 500)); 
+
+        const pdfContainer = document.createElement('div');
+        pdfContainer.id = 'pdf-container';
+        pdfContainer.dir = 'rtl'; 
+        document.body.appendChild(pdfContainer);
+
+        // --- Build HTML for PDF ---
+        let html = `<div style="padding: 20px; font-family: 'Assistant', sans-serif;">`;
+
+        // Header
+        html += `<div style="text-align: center; border-bottom: 2px solid #ccc; padding-bottom: 10px; margin-bottom: 20px;">
+                   <h1 style="font-size: 24px; color: #3b82f6; margin: 0;">דוח מיון קרקע</h1>
+                 </div>`;
+
+        // Input Data
+        html += `<h2 style="font-size: 18px; margin-top: 20px; border-bottom: 1px solid #eee; padding-bottom: 5px;">נתוני קלט</h2>
+                 <ul style="list-style-type: none; padding: 0;">
+                   <li><strong>משקל מדגם כולל:</strong> ${$('#sampleWeight').value} גרם</li>
+                   <li><strong>גבול נזילות (LL):</strong> ${$('#liquidLimit').value || 'לא הוזן'}</li>
+                   <li><strong>גבול פלסטי (PL):</strong> ${$('#plasticLimit').value || 'לא הוזן'}</li>
+                 </ul>`;
+        
+        // Sieve Table
+        html += `<h2 style="font-size: 18px; margin-top: 20px; border-bottom: 1px solid #eee; padding-bottom: 5px;">טבלת תוצאות ניפוי</h2>
+                 ${$('#table-wrapper').innerHTML}`;
+
+        // Classification Results
+        html += `<h2 style="font-size: 18px; margin-top: 20px; border-bottom: 1px solid #eee; padding-bottom: 5px;">תוצאות וסיווג</h2>
+                 ${$('#uscs-result-wrapper').innerHTML}
+                 ${$('#aashto-result-wrapper').innerHTML}`;
+
+        // Solution Steps
+        html += `<h2 style="font-size: 18px; margin-top: 20px; border-bottom: 1px solid #eee; padding-bottom: 5px;">דרך פתרון</h2>
+                 ${currentResults.uscs.solutionSteps.join('')}
+                 ${currentResults.aashto.solutionSteps.join('')}`;
+        
+        // Charts
+        const grainSizeImg = grainSizeChart.toBase64Image();
+        const plasticityImg = plasticityChart.toBase64Image();
+        html += `<h2 style="font-size: 18px; margin-top: 20px; border-bottom: 1px solid #eee; padding-bottom: 5px;">גרפים</h2>
+                 <div style="text-align: center;">
+                    <img src="${grainSizeImg}" style="width: 100%; max-width: 500px; margin-top: 10px; border: 1px solid #ccc; padding: 5px; border-radius: 5px;">
+                    <img src="${plasticityImg}" style="width: 100%; max-width: 400px; margin-top: 20px; border: 1px solid #ccc; padding: 5px; border-radius: 5px;">
+                 </div>`;
+        
+        // Expanded Info
+        const symbolBase = currentResults.uscs.symbol.split('-')[0];
+        const infoDetails = lang[currentLang]?.soilDetails?.[symbolBase];
+        if (infoDetails) {
+            html += `<h2 style="font-size: 18px; margin-top: 20px; border-bottom: 1px solid #eee; padding-bottom: 5px;">מידע מורחב על ${symbolBase}</h2>
+                     <p><strong>תיאור:</strong> ${infoDetails.description}</p>
+                     <p><strong>תפוצה בישראל:</strong> ${infoDetails.prevalence_il}</p>`;
+        }
+        
+        // Footer
+        html += `<div style="text-align: center; margin-top: 40px; font-size: 10px; border-top: 1px solid #ccc; padding-top: 10px;">
+                   ${lang[currentLang].footer_rights} - נוצר בתאריך ${new Date().toLocaleDateString('he-IL')}
+                 </div>`;
+
+        html += `</div>`;
+        pdfContainer.innerHTML = html;
+        
+        // --- Generate PDF from HTML ---
+        await html2canvas(pdfContainer, { scale: 2, useCORS: true }).then(canvas => {
+            const imgData = canvas.toDataURL('image/png');
+            const imgProps = pdf.getImageProperties(imgData);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`Soil_Classification_Report_${new Date().toISOString().slice(0,10)}.pdf`);
+        });
+
+        document.body.removeChild(pdfContainer);
+        if (isDark) document.documentElement.classList.add('dark');
+    }
+    
+    function openChartInModal(chartId) {
+        const modal = $('#solution-modal');
+        const modalTitle = $('#modal-title');
+        const modalContent = $('#modal-content');
+        
+        let chartInstance, titleKey;
+        if(chartId === 'grainSizeChart') {
+            chartInstance = grainSizeChart;
+            titleKey = 'grain_size_curve';
+        } else if (chartId === 'plasticityChart') {
+            chartInstance = plasticityChart;
+            titleKey = 'plasticity_chart_title';
+        } else if (chartId === 'proctorChart') {
+            chartInstance = proctorChart;
+            titleKey = 'proctor_curve';
+        } else {
+            return;
+        }
+        
+        modalTitle.textContent = lang[currentLang]?.[titleKey] || titleKey;
+        modalContent.innerHTML = `<div class="w-full h-[75vh]"><canvas id="zoom-canvas"></canvas></div>`;
+        
+        const zoomCanvas = $('#zoom-canvas');
+        if (chartInstance) {
+           const newChart = new Chart(zoomCanvas.getContext('2d'), chartInstance.config);
+           updateChartTheme(newChart);
+        }
+        
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+    // --- END: FUNCTION DEFINITIONS ---
+    
+
+    // --- START: INITIALIZATION & EVENT LISTENERS ---
+    document.addEventListener('DOMContentLoaded', initializeApp);
+    
+    function initializeApp() {
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            $('#theme-icon-light').classList.add('hidden');
+            $('#theme-icon-dark').classList.remove('hidden');
+        }
+        setupEventListeners();
+        updateLanguageUI();
+        initSieveAnimation();
+        addProctorRow();
+        loadInputsFromLocalStorage();
+    }
+    
+    function setupEventListeners() {
+        $('#theme-toggle').addEventListener('click', toggleTheme);
+        $('#lang-toggle').addEventListener('click', toggleLanguage);
+        $('#calculate-btn').addEventListener('click', handleCalculation);
+        $('#reset-btn').addEventListener('click', resetForm);
+        $('#export-pdf-btn').addEventListener('click', exportToPDF);
+        $('#modal-close-btn').addEventListener('click', () => $('#solution-modal').classList.add('hidden'));
+        $('#case-study-select').addEventListener('change', (e) => loadCaseStudy(e.target.value));
+        $$('.tab-btn').forEach(btn => btn.addEventListener('click', switchTab));
+        $('#add-proctor-row-btn').addEventListener('click', addProctorRow);
+        $('#calculate-proctor-btn').addEventListener('click', handleProctorCalculation);
+
+        const inputsToSave = ['#sampleWeight', '#liquidLimit', '#plasticLimit'];
+        inputsToSave.forEach(selector => $(selector)?.addEventListener('input', scheduleSave));
+        
+        document.addEventListener('click', (e) => {
+            const resetButton = e.target.closest('.reset-zoom-btn');
+            const expandButton = e.target.closest('.expand-chart-btn');
+
+            if (resetButton) {
+                const chartId = resetButton.dataset.chart;
+                let chartInstance;
+                if (chartId === 'grainSizeChart') chartInstance = grainSizeChart;
+                else if (chartId === 'plasticityChart') chartInstance = plasticityChart;
+                else if (chartId === 'proctorChart') chartInstance = proctorChart;
+                
+                if (chartInstance) chartInstance.resetZoom();
+            }
+
+            if (expandButton) {
+                const chartId = expandButton.dataset.chart;
+                openChartInModal(chartId);
+            }
+        });
+    }
+    
+    function scheduleSave() {
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(saveInputsToLocalStorage, 500); // Debounce saving
+    }
+    // --- END: INITIALIZATION & EVENT LISTENERS ---
+
+    </script>
+</body>
+</html>

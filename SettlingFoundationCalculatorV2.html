@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מחשבון שקיעות ליסודות רדודים</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-light: #f1f5f9;
+            --bg-dark: #1e293b;
+            --text-light: #0f172a;
+            --text-dark: #f8fafc;
+            --card-light: #ffffff;
+            --card-dark: #334155;
+            --border-light: #cbd5e1;
+            --border-dark: #475569;
+            --primary: #2563eb; 
+            --primary-hover: #1d4ed8;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --danger-bg: #fef2f2;
+        }
+        html[lang="he"] body { font-family: 'Assistant', sans-serif; }
+        html[lang="en"] body { font-family: 'Roboto', sans-serif; }
+        html.dark { color-scheme: dark; }
+        body { background-color: var(--bg-light); color: var(--text-light); transition: background-color 0.3s, color 0.3s; }
+        html.dark body { background-color: var(--bg-dark); color: var(--text-dark); }
+        .card { background-color: var(--card-light); border: 1px solid var(--border-light); transition: background-color 0.3s, border-color 0.3s; }
+        html.dark .card { background-color: var(--card-dark); border-color: var(--border-dark); }
+        .tooltip { position: relative; display: inline-block; cursor: help; }
+        .tooltip .tooltiptext { visibility: hidden; width: 250px; background-color: #555; color: #fff; text-align: center; border-radius: 6px; padding: 8px; position: absolute; z-index: 1; bottom: 125%; left: 50%; margin-left: -125px; opacity: 0; transition: opacity 0.3s; }
+        .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+        .input-group:focus-within label, .input-group input:not(:placeholder-shown):not([type=""]) + label, .input-group select:valid + label { transform: translateY(-1.75rem) scale(0.8); color: var(--primary); }
+        html[dir="ltr"] .input-group:focus-within label, html[dir="ltr"] .input-group input:not(:placeholder-shown):not([type=""]) + label, html[dir="ltr"] .input-group select:valid + label { transform: translateY(-1.75rem) scale(0.8) translateX(0); }
+        .modal { background-color: rgba(0, 0, 0, 0.5); }
+        .modal-content { background-color: var(--bg-light); }
+        html.dark .modal-content { background-color: var(--bg-dark); }
+        .input-error-message { font-size: 0.8rem; color: var(--danger); margin-top: 0.25rem; display: none; }
+        input.invalid { border-color: var(--danger) !important; background-color: var(--danger-bg) !important; }
+        
+        .solution-h3 { font-size: 1.5rem; font-weight: bold; margin-top: 2rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary); }
+        .solution-p { font-size: 1.125rem; line-height: 1.7; margin-bottom: 1rem; }
+        .solution-box { border: 1px solid var(--border-light); background-color: var(--bg-light); padding: 1rem; border-radius: 0.5rem; margin-top: 1rem; margin-bottom: 1.5rem; }
+        html.dark .solution-box { background-color: var(--card-dark); border-color: var(--border-dark); }
+        .solution-result-box { border: 2px solid var(--primary); padding: 1rem; border-radius: 0.25rem; font-weight: bold; text-align: center; margin-top: 1rem;}
+        .math-formula { font-size: 1.25em; padding: 1em; text-align: center; }
+        .solution-legend { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-out; font-size: 1rem; line-height: 1.5; border-top: 1px dashed var(--border-light); margin-top: 1rem; padding-top: 1rem; }
+        html[dir="rtl"] .solution-legend { text-align: right; }
+        html[dir="ltr"] .solution-legend { text-align: left; }
+        html.dark .solution-legend { border-color: var(--border-dark); }
+        .legend-toggle-btn { background-color: #e2e8f0; color: #475569; font-size: 0.875rem; padding: 0.25rem 0.75rem; border-radius: 9999px; cursor: pointer; }
+        html.dark .legend-toggle-btn { background-color: #475569; color: #e2e8f0; }
+        .styled-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        .styled-table th, .styled-table td { border: 1px solid var(--border-light); padding: 0.75rem; text-align: center; }
+        html.dark .styled-table th, html.dark .styled-table td { border-color: var(--border-dark); }
+        .styled-table th { background-color: #f8fafc; }
+        html.dark .styled-table th { background-color: var(--card-dark); }
+        /* Fix: Ensure hidden class overrides other display properties */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="p-4 sm:p-6 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="relative flex flex-col items-center mb-4">
+            <div id="controls-container" class="absolute top-0 right-0 flex items-center space-x-2 space-x-reverse">
+                 <button id="lang-toggle" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-sm font-bold w-10 h-10">EN</button>
+                 <button id="theme-toggle" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                    <svg id="theme-icon-light" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                    <svg id="theme-icon-dark" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 5.05a1 1 0 010 1.414l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 0zM3 11a1 1 0 100-2H2a1 1 0 100 2h1z"></path></svg>
+                </button>
+            </div>
+            <img id="logo-img" src="https://c.ort.org.il/jerusalem/wp-content/uploads/sites/7/2025/04/%D7%90%D7%95%D7%A8%D7%98-%D7%99%D7%A8%D7%95%D7%A9%D7%9C%D7%99%D7%9D-%D7%9C%D7%95%D7%92%D7%95-%D7%9B%D7%97%D7%95%D7%9C-1.png" alt="ORT Jerusalem Logo" class="absolute top-0 left-0 h-12">
+            
+            <div class="text-center">
+                <h1 data-lang-key="main_title" class="text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">מחשבון שקיעות ליסודות רדודים</h1>
+                <p data-lang-key="subtitle" class="text-sm text-gray-600 dark:text-gray-400 mt-1">דף חישוב נלווה להרצאה מס' 6. הכלי נוצר למטרות לימודיות ואין להסתמך על תוצאותיו ללא בדיקה מקצועית.</p>
+            </div>
+        </header>
+
+        <!-- Main Grid Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+
+            <!-- Left Column: Inputs -->
+            <div class="lg:col-span-1 space-y-6">
+                <div class="card p-5 rounded-lg shadow-md">
+                    <h2 data-lang-key="foundation_data_title" class="text-xl font-bold mb-4 border-b pb-2 border-border-light dark:border-border-dark">נתוני היסוד</h2>
+                    <div class="space-y-4 mt-4">
+                        <div class="relative input-group"><select id="foundation_shape" required class="w-full p-2.5 border rounded-md bg-transparent border-border-light dark:border-border-dark focus:ring-2 focus:ring-blue-500 focus:outline-none transition appearance-none"><option data-lang-key="shape_rectangular" value="rectangular">מלבני</option><option data-lang-key="shape_circular" value="circular">עגול</option></select><label data-lang-key="shape_label" class="absolute top-2 text-gray-500 dark:text-gray-400 transition-all duration-300 pointer-events-none">צורת היסוד</label></div>
+                        <div id="rectangular-inputs">
+                            <div class="relative input-group mt-6"><input type="number" id="L" placeholder=" " class="w-full p-2 border rounded-md bg-transparent border-border-light dark:border-border-dark" value="30"><label data-lang-key="length_label" class="absolute top-2 text-gray-500 dark:text-gray-400">אורך היסוד L (m)</label><span class="absolute top-2 tooltip">ℹ️<span class="tooltiptext" data-lang-key="length_tooltip">המידה הארוכה של היסוד.</span></span><div class="input-error-message" data-lang-key="error_positive">יש להזין ערך מספרי חיובי.</div></div>
+                            <div class="relative input-group mt-6"><input type="number" id="B" placeholder=" " class="w-full p-2 border rounded-md bg-transparent border-border-light dark:border-border-dark" value="2.5"><label data-lang-key="width_label" class="absolute top-2 text-gray-500 dark:text-gray-400">רוחב היסוד B (m)</label><span class="absolute top-2 tooltip">ℹ️<span class="tooltiptext" data-lang-key="width_tooltip">המידה הקצרה של היסוד.</span></span><div class="input-error-message" data-lang-key="error_positive">יש להזין ערך מספרי חיובי.</div></div>
+                        </div>
+                        <div id="circular-inputs" class="hidden"><div class="relative input-group mt-6"><input type="number" id="D" placeholder=" " class="w-full p-2 border rounded-md bg-transparent border-border-light dark:border-border-dark" value="3"><label data-lang-key="diameter_label" class="absolute top-2 text-gray-500 dark:text-gray-400">קוטר היסוד D (m)</label><span class="absolute top-2 tooltip">ℹ️<span class="tooltiptext" data-lang-key="diameter_tooltip">קוטר היסוד העגול.</span></span><div class="input-error-message" data-lang-key="error_positive">יש להזין ערך מספרי חיובי.</div></div></div>
+                        <div class="relative input-group mt-6"><input type="number" id="H" placeholder=" " class="w-full p-2 border rounded-md bg-transparent border-border-light dark:border-border-dark" value="0.6"><label data-lang-key="height_label" class="absolute top-2 text-gray-500 dark:text-gray-400">גובה/עובי היסוד h (m)</label><span class="absolute top-2 tooltip">ℹ️<span class="tooltiptext" data-lang-key="height_tooltip">עובי היסוד. משמש לחישוב אינרציה. טווח אופייני: 0.5-1.5 מ'.</span></span><div class="input-error-message" data-lang-key="error_positive">יש להזין ערך מספרי חיובי.</div></div>
+                        <div class="relative input-group mt-6"><input type="number" id="E_concrete" placeholder=" " class="w-full p-2 border rounded-md bg-transparent border-border-light dark:border-border-dark" value="26200"><label data-lang-key="e_concrete_label" class="absolute top-2 text-gray-500 dark:text-gray-400">מודול אלסטיות (בטון) E (MPa)</label><span class="absolute top-2 tooltip">ℹ️<span class="tooltiptext" data-lang-key="e_concrete_tooltip">מודול האלסטיות של הבטון. טווח אופייני לבטון ב-30 עד ב-50: 25,000-35,000 MPa.</span></span><div class="input-error-message" data-lang-key="error_positive">יש להזין ערך מספרי חיובי.</div></div>
+                    </div>
+                </div>
+                <div class="card p-5 rounded-lg shadow-md">
+                    <h2 data-lang-key="soil_data_title" class="text-xl font-bold mb-4 border-b pb-2 border-border-light dark:border-border-dark">נתוני הקרקע</h2>
+                    <div class="space-y-4 mt-4">
+                        <div class="relative input-group mt-6"><input type="number" id="q_applied" placeholder=" " class="w-full p-2 border rounded-md bg-transparent border-border-light dark:border-border-dark" value="190"><label data-lang-key="load_label" class="absolute top-2 text-gray-500 dark:text-gray-400">עומס על היסוד q (kPa)</label><span class="absolute top-2 tooltip">ℹ️<span class="tooltiptext" data-lang-key="load_tooltip">המאמץ נטו המופעל על ידי היסוד על הקרקע. טווח אופייני למבני מגורים/מסחר: 100-300 kPa.</span></span><div class="input-error-message" data-lang-key="error_positive">יש להזין ערך מספרי חיובי.</div></div>
+                        <div class="relative input-group mt-6"><input type="number" id="K_subgrade" placeholder=" " class="w-full p-2 border rounded-md bg-transparent border-border-light dark:border-border-dark" value="120000"><label data-lang-key="k_subgrade_label" class="absolute top-2 text-gray-500 dark:text-gray-400">מודול מצע K (kN/m³)</label><span class="absolute top-2 tooltip">ℹ️<span class="tooltiptext" data-lang-key="k_subgrade_tooltip">מודול תגובת תת-הקרקע (רלוונטי ליסוד מלבני). חול: 15,000-60,000. חרסית: 10,000-30,000.</span></span><div class="input-error-message" data-lang-key="error_positive">יש להזין ערך מספרי חיובי.</div></div>
+                        <div class="relative input-group mt-6"><input type="number" id="E_soil" placeholder=" " class="w-full p-2 border rounded-md bg-transparent border-border-light dark:border-border-dark" value="70000"><label data-lang-key="e_soil_label" class="absolute top-2 text-gray-500 dark:text-gray-400">מודול יאנג (קרקע) Es (kPa)</label><span class="absolute top-2 tooltip">ℹ️<span class="tooltiptext" data-lang-key="e_soil_tooltip">מודול האלסטיות של הקרקע. חול: 10,000-50,000. חרסית: 5,000-25,000. סלע רך: 70,000+.</span></span><div class="input-error-message" data-lang-key="error_positive">יש להזין ערך מספרי חיובי.</div></div>
+                        <div class="relative input-group mt-6"><input type="number" id="poisson_ratio" placeholder=" " class="w-full p-2 border rounded-md bg-transparent border-border-light dark:border-border-dark" value="0.3"><label data-lang-key="poisson_label" class="absolute top-2 text-gray-500 dark:text-gray-400">מקדם פואסון ν</label><span class="absolute top-2 tooltip">ℹ️<span class="tooltiptext" data-lang-key="poisson_tooltip">מקדם פואסון של הקרקע. חול: 0.2-0.35. חרסית: 0.35-0.5.</span></span><div class="input-error-message" data-lang-key="error_positive">יש להזין ערך מספרי חיובי.</div></div>
+                    </div>
+                </div>
+                <div class="card p-5 rounded-lg shadow-md">
+                    <h2 data-lang-key="diff_settlement_title" class="text-xl font-bold mb-4 border-b pb-2 border-border-light dark:border-border-dark">בדיקת שקיעה הבדלית</h2>
+                    <div class="space-y-4 mt-4">
+                        <div class="relative input-group mt-6"><input type="number" id="L_span" placeholder=" " class="w-full p-2 border rounded-md bg-transparent border-border-light dark:border-border-dark" value="6"><label data-lang-key="span_label" class="absolute top-2 text-gray-500 dark:text-gray-400">מרחק ליסוד סמוך L (m)</label><span class="absolute top-2 tooltip">ℹ️<span class="tooltiptext" data-lang-key="span_tooltip">המרחק בין מרכזי היסודות הנבדקים.</span></span><div class="input-error-message" data-lang-key="error_positive">יש להזין ערך מספרי חיובי.</div></div>
+                        <div class="relative input-group mt-6"><input type="number" id="settlement_adjacent" placeholder=" " class="w-full p-2 border rounded-md bg-transparent border-border-light dark:border-border-dark" value="0.5"><label data-lang-key="adjacent_settlement_label" class="absolute top-2 text-gray-500 dark:text-gray-400">שקיעת יסוד סמוך δ (cm)</label><span class="absolute top-2 tooltip">ℹ️<span class="tooltiptext" data-lang-key="adjacent_settlement_tooltip">השקיעה המחושבת או הנמדדת של היסוד הסמוך. ערך שלילי מייצג התרוממות.</span></span><div class="input-error-message" data-lang-key="error_numeric">יש להזין ערך מספרי.</div></div>
+                        <div class="relative input-group mt-6"><select id="structure_type" required class="w-full p-2.5 border rounded-md bg-transparent border-border-light dark:border-border-dark appearance-none"><option data-lang-key="structure_rigid" value="rigid">מבנה קשיח (בטון)</option><option data-lang-key="structure_regular" value="regular">מבנה רגיל</option><option data-lang-key="structure_steel" value="steel">מבנה פלדה</option></select><label data-lang-key="structure_type_label" class="absolute top-2 text-gray-500 dark:text-gray-400">סוג מבנה (עליון)</label></div>
+                    </div>
+                </div>
+                <button id="calculate-btn" data-lang-key="calculate_btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105 shadow-lg">חשב שקיעות</button>
+            </div>
+
+            <!-- Right Column: Visualization and Results -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="card p-5 rounded-lg shadow-md h-96 flex flex-col items-center justify-center">
+                    <h2 data-lang-key="viz_title" class="text-xl font-bold mb-4 w-full text-center">ויזואליזציה דינמית</h2>
+                    <canvas id="foundation-canvas" class="w-full h-full"></canvas>
+                </div>
+                <div id="results-container" class="card p-5 rounded-lg shadow-md hidden">
+                     <h2 data-lang-key="results_title" class="text-xl font-bold mb-4 border-b pb-2 border-border-light dark:border-border-dark">תוצאות החישוב</h2>
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div id="rigidity-result" class="p-4 rounded-lg flex items-center gap-4"><div id="rigidity-icon" class="text-3xl"></div><div><p data-lang-key="rigidity_check_title" class="font-bold text-lg">בדיקת קשיחות</p><p id="rigidity-text" class="text-lg"></p><p id="lambda-value" class="text-sm text-gray-500 dark:text-gray-400"></p></div></div>
+                        <div id="settlement-result" class="p-4 rounded-lg flex items-center gap-4"><div id="settlement-icon" class="text-3xl">⬇️</div><div><p data-lang-key="max_settlement_title" class="font-bold text-lg">שקיעה מירבית מחושבת</p><p id="settlement-text" class="text-2xl font-bold"></p><p id="settlement-location" class="text-sm text-gray-500 dark:text-gray-400"></p></div></div>
+                        <div id="diff-settlement-result" class="p-4 rounded-lg md:col-span-2 flex items-center gap-4"><div id="diff-settlement-icon" class="text-3xl"></div><div><p data-lang-key="diff_settlement_check_title" class="font-bold text-lg">בדיקת שקיעה הבדלית</p><p id="diff-settlement-text" class="text-lg"></p><p id="diff-settlement-details" class="text-sm text-gray-500 dark:text-gray-400"></p></div></div>
+                     </div>
+                     <div class="mt-6 text-center">
+                         <button id="toggle-solution-btn" data-lang-key="toggle_solution_btn" class="bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-700 dark:bg-gray-500 dark:hover:bg-gray-600 transition shadow">הצג מהלך פתרון מפורט</button>
+                     </div>
+                </div>
+                <div class="card p-5 rounded-lg shadow-md h-72">
+                     <h2 data-lang-key="chart_title" class="text-xl font-bold mb-4">גרף פרופיל שקיעה</h2>
+                    <canvas id="settlement-chart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div id="solution-section" class="hidden mt-8">
+            <div class="card p-6 sm:p-8 rounded-lg shadow-md">
+                 <div class="flex justify-between items-center border-b pb-3 mb-4 border-border-light dark:border-border-dark">
+                    <h2 data-lang-key="solution_title" class="text-2xl font-bold">מהלך פתרון מפורט</h2>
+                     <div class="flex items-center gap-2">
+                        <button id="export-doc-btn" class="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition flex items-center gap-2" title="Export to DOC">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" /></svg>
+                           <span data-lang-key="export_doc_btn">ייצא ל-DOC</span>
+                        </button>
+                     </div>
+                 </div>
+                <div id="solution-content" class="max-w-none"></div>
+            </div>
+        </div>
+        <footer class="text-center text-sm text-gray-500 mt-8 py-4 border-t border-gray-200 dark:border-gray-700" data-lang-key="footer_text">© כל הזכויות שמורות לשלומי שאול</footer>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="password-modal" class="fixed inset-0 z-50 flex items-center justify-center modal hidden">
+        <div class="modal-content p-8 rounded-lg shadow-2xl w-full max-w-sm mx-auto text-center card">
+            <h3 data-lang-key="password_title" class="text-xl font-bold mb-4">נדרשת סיסמה</h3>
+            <p data-lang-key="password_subtitle" class="mb-4 text-gray-600 dark:text-gray-300">נדרשת סיסמה לצפייה בפתרון המפורט או לייצוא הדוח.</p>
+            <input type="password" id="password-input" class="w-full p-2 border rounded-md text-center bg-transparent border-border-light dark:border-border-dark" autocomplete="current-password">
+            <p id="password-error" data-lang-key="password_error" class="text-danger mt-2 hidden">סיסמה שגויה!</p>
+            <div class="mt-6 flex justify-center gap-4">
+                <button id="password-submit" data-lang-key="password_submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg">אישור</button>
+                <button id="password-cancel" data-lang-key="password_cancel" class="bg-gray-300 text-gray-800 dark:text-gray-200 font-bold py-2 px-4 rounded-lg">ביטול</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    let currentLanguage = 'he';
+    
+    const translations = {
+        he: {
+            main_title: "מחשבון שקיעות ליסודות רדודים",
+            subtitle: "דף חישוב נלווה להרצאה מס' 6. הכלי נוצר למטרות לימודיות ואין להסתמך על תוצאותיו ללא בדיקה מקצועית.",
+            foundation_data_title: "נתוני היסוד",
+            shape_rectangular: "מלבני",
+            shape_circular: "עגול",
+            shape_label: "צורת היסוד",
+            length_label: "אורך היסוד L (m)",
+            length_tooltip: "המידה הארוכה של היסוד.",
+            width_label: "רוחב היסוד B (m)",
+            width_tooltip: "המידה הקצרה של היסוד.",
+            diameter_label: "קוטר היסוד D (m)",
+            diameter_tooltip: "קוטר היסוד העגול.",
+            height_label: "גובה/עובי היסוד h (m)",
+            height_tooltip: "עובי היסוד. משמש לחישוב אינרציה. טווח אופייני: 0.5-1.5 מ'.",
+            e_concrete_label: "מודול אלסטיות (בטון) E (MPa)",
+            e_concrete_tooltip: "מודול האלסטיות של הבטון. טווח אופייני לבטון ב-30 עד ב-50: 25,000-35,000 MPa.",
+            soil_data_title: "נתוני הקרקע",
+            load_label: "עומס על היסוד q (kPa)",
+            load_tooltip: "המאמץ נטו המופעל על ידי היסוד על הקרקע. טווח אופייני למבני מגורים/מסחר: 100-300 kPa.",
+            k_subgrade_label: "מודול מצע K (kN/m³)",
+            k_subgrade_tooltip: "מודול תגובת תת-הקרקע (רלוונטי ליסוד מלבני). חול: 15,000-60,000. חרסית: 10,000-30,000.",
+            e_soil_label: "מודול יאנג (קרקע) Es (kPa)",
+            e_soil_tooltip: "מודול האלסטיות של הקרקע. חול: 10,000-50,000. חרסית: 5,000-25,000. סלע רך: 70,000+.",
+            poisson_label: "מקדם פואסון ν",
+            poisson_tooltip: "מקדם פואסון של הקרקע. חול: 0.2-0.35. חרסית: 0.35-0.5.",
+            diff_settlement_title: "בדיקת שקיעה הבדלית",
+            span_label: "מרחק ליסוד סמוך L (m)",
+            span_tooltip: "המרחק בין מרכזי היסודות הנבדקים.",
+            adjacent_settlement_label: "שקיעת יסוד סמוך δ (cm)",
+            adjacent_settlement_tooltip: "השקיעה המחושבת או הנמדדת של היסוד הסמוך. ערך שלילי מייצג התרוממות.",
+            structure_type_label: "סוג מבנה (עליון)",
+            structure_rigid: "מבנה קשיח (בטון)",
+            structure_regular: "מבנה רגיל",
+            structure_steel: "מבנה פלדה",
+            calculate_btn: "חשב שקיעות",
+            viz_title: "ויזואליזציה דינמית",
+            results_title: "תוצאות החישוב",
+            rigidity_check_title: "בדיקת קשיחות",
+            max_settlement_title: "שקיעה מירבית מחושבת",
+            diff_settlement_check_title: "בדיקת שקיעה הבדלית",
+            toggle_solution_btn: "הצג מהלך פתרון מפורט",
+            toggle_solution_btn_hide: "הסתר מהלך פתרון",
+            chart_title: "גרף פרופיל שקיעה",
+            solution_title: "מהלך פתרון מפורט",
+            export_doc_btn: "ייצא ל-DOC",
+            footer_text: "© כל הזכויות שמורות לשלומי שאול",
+            password_title: "נדרשת סיסמה",
+            password_subtitle: "נדרשת סיסמה לצפייה בפתרון המפורט או לייצוא הדוח.",
+            password_error: "סיסמה שגויה!",
+            password_submit: "אישור",
+            password_cancel: "ביטול",
+            error_positive: "יש להזין ערך מספרי חיובי.",
+            error_numeric: "יש להזין ערך מספרי.",
+            legend_btn: "מקרא",
+            rigidity_rigid: "היסוד קשיח",
+            rigidity_flexible: "היסוד גמיש",
+            rigidity_assumed_flexible: "יסוד גמיש (הנחה)",
+            rigidity_note_circular: "קשיחות לא נבדקה (אין נוסחה במקורות). החישוב בוצע כיסוד גמיש (לחומרה).",
+            settlement_location_uniform: "שקיעה אחידה",
+            settlement_location_center: "במרכז היסוד",
+            diff_settlement_ok: "עומד בדרישות התקן",
+            diff_settlement_fail: "חורג מדרישות התקן",
+            diff_settlement_details_text: "שקיעה הבדלית: {diff} cm, מותר: {allowable} cm ({ratio})",
+            chart_y_axis_label: 'שקיעה (ס"מ)',
+            chart_x_axis_label: "מיקום לאורך היסוד",
+            chart_dataset_label: 'פרופיל שקיעה (ס"מ)',
+            chart_labels_rect: ['קצה 1', 'רבע אורך', 'מרכז היסוד', 'שלושת רבעי אורך', 'קצה 2'],
+            chart_labels_circ: ['קצה', 'חצי רדיוס', 'מרכז'],
+            ground_text: "קרקע",
+            sol_rigidity_title: "1. בדיקת קשיחות היסוד (Hetenyi)",
+            sol_rigidity_p1: "כדי לקבוע אם היסוד מתנהג כיסוד קשיח או גמיש, משתמשים בקריטריון Hetenyi, הרלוונטי ליסודות מלבניים.",
+            sol_legend_lambda: "פרמטר קשיחות (חסר יחידות)",
+            sol_legend_K: "מודול מצע של הקרקע (kN/m³)",
+            sol_legend_BL: "רוחב ואורך היסוד (m)",
+            sol_legend_E: "מודול אלסטיות של חומר היסוד (kPa)",
+            sol_legend_I: "מומנט אינרציה של חתך היסוד (m⁴)",
+            sol_step_a: "שלב א': חישוב מומנט האינרציה (I)",
+            sol_legend_I_h: "מומנט אינרציה (m⁴)",
+            sol_legend_B_h: "רוחב היסוד (m)",
+            sol_legend_h_h: "גובה/עובי היסוד (m)",
+            sol_step_b: "שלב ב': חישוב פרמטר הקשיחות (λL)",
+            sol_rigidity_conclusion: "מסקנה: מכיוון ש-{lambda} {comparison} {pi_approx}, היסוד יחושב כיסוד {status}.",
+            sol_rigidity_status_rigid: "קשיח",
+            sol_rigidity_status_flexible: "גמיש",
+            sol_rigidity_title_circ: "1. בדיקת קשיחות היסוד",
+            sol_settlement_title: "2. חישוב שקיעה מיידית (אלסטית)",
+            sol_settlement_p1: "הנוסחה הכללית לשקיעה אלסטית:",
+            sol_legend_delta: "שקיעת היסוד (m)",
+            sol_legend_q0: "עומס על היסוד (kPa)",
+            sol_legend_B_prime: "המידה הקצרה של היסוד (רוחב B או קוטר D) (m)",
+            sol_legend_Es: "מודול יאנג של הקרקע (kPa)",
+            sol_legend_nu: "מקדם פואסון של הקרקע",
+            sol_legend_Is: "מקדם השפעה (תלוי צורה ומיקום)",
+            sol_settlement_p2: "מקדמי ההשפעה (Is) לפי צורת היסוד (מקור: הרצאה 6, שקף 9):",
+            table_shape: "צורת יסוד",
+            table_center: "מרכז",
+            table_corner: "פינה",
+            table_average: "ממוצע",
+            sol_settlement_p3: "חישוב השקיעה:",
+            sol_rigid_p1: "מכיוון שהיסוד קשיח, השקיעה שלו אחידה. לפי מצגת הקורס (שקף 10), שקיעת יסוד קשיח היא כ-{reductionFactor}% משקיעת מרכז של יסוד גמיש.",
+            sol_rigid_p2: "שקיעת יסוד גמיש במרכז (לצורך חישוב):",
+            sol_rigid_p3: "שקיעת יסוד קשיח:",
+            sol_flexible_p1: "מכיוון שהיסוד גמיש, השקיעה אינה אחידה. השקיעה המירבית מתקבלת במרכז.",
+            sol_flexible_p2: "חישוב שקיעת מרכז (מירבית):",
+            sol_flexible_p3: "חישוב שקיעת פינה:",
+            sol_flexible_p4: "חישוב שקיעה ממוצעת:",
+            sol_flexible_p5: "השקיעה המירבית לחישובים הבאים היא שקיעת המרכז: δ_max = {maxSettlement} cm",
+            sol_diff_title: "3. בדיקת שקיעה הבדלית (ת\"י 940)",
+            sol_diff_p1: "השקיעה ההבדלית המותרת לפי ת\"י 940, טבלה 3.1, עבור {structureTypeName}:",
+            table_desc: "תיאור מבנה",
+            table_angle: "שינוי זווית / תזוזה מותרת",
+            sol_diff_p2: "חישוב שקיעה הבדלית:",
+            sol_diff_p3: "חישוב שקיעה הבדלית מותרת:",
+            sol_legend_dda: "שקיעה הבדלית בפועל (cm)",
+            sol_legend_dm: "שקיעה מירבית של היסוד הנבדק (cm)",
+            sol_legend_da: "שקיעת יסוד סמוך (cm)",
+            sol_legend_ls: "מרחק בין יסודות (m)",
+            sol_diff_conclusion: "מסקנה: השקיעה ההבדלית <strong>{status}</strong> בדרישות התקן.",
+            sol_diff_status_ok: "עומדת",
+            sol_diff_status_fail: "חורגת מ-",
+        },
+        en: {
+            main_title: "Shallow Foundations Settlement Calculator",
+            subtitle: "Calculation sheet for Lecture 6. This tool is for educational purposes only. Do not rely on its results without professional verification.",
+            foundation_data_title: "Foundation Data",
+            shape_rectangular: "Rectangular",
+            shape_circular: "Circular",
+            shape_label: "Foundation Shape",
+            length_label: "Foundation Length L (m)",
+            length_tooltip: "The long dimension of the foundation.",
+            width_label: "Foundation Width B (m)",
+            width_tooltip: "The short dimension of the foundation.",
+            diameter_label: "Foundation Diameter D (m)",
+            diameter_tooltip: "The diameter of the circular foundation.",
+            height_label: "Foundation Height h (m)",
+            height_tooltip: "Foundation thickness, used for inertia calculation. Typical range: 0.5-1.5 m.",
+            e_concrete_label: "Modulus of Elasticity (Concrete) E (MPa)",
+            e_concrete_tooltip: "Elasticity modulus of concrete. Typical range for C30-C50 concrete: 25,000-35,000 MPa.",
+            soil_data_title: "Soil Data",
+            load_label: "Load on Foundation q (kPa)",
+            load_tooltip: "The net stress applied by the foundation on the soil. Typical range for residential/commercial buildings: 100-300 kPa.",
+            k_subgrade_label: "Subgrade Modulus K (kN/m³)",
+            k_subgrade_tooltip: "Modulus of subgrade reaction (relevant for rectangular foundations). Sand: 15,000-60,000. Clay: 10,000-30,000.",
+            e_soil_label: "Young's Modulus (Soil) Es (kPa)",
+            e_soil_tooltip: "Elasticity modulus of the soil. Sand: 10,000-50,000. Clay: 5,000-25,000. Soft rock: 70,000+.",
+            poisson_label: "Poisson's Ratio ν",
+            poisson_tooltip: "Poisson's ratio of the soil. Sand: 0.2-0.35. Clay: 0.35-0.5.",
+            diff_settlement_title: "Differential Settlement Check",
+            span_label: "Span to Adjacent Foundation L (m)",
+            span_tooltip: "The distance between the centers of the checked foundations.",
+            adjacent_settlement_label: "Adjacent Settlement δ (cm)",
+            adjacent_settlement_tooltip: "The calculated or measured settlement of the adjacent foundation. A negative value represents uplift.",
+            structure_type_label: "Superstructure Type",
+            structure_rigid: "Rigid Structure (Concrete)",
+            structure_regular: "Regular Structure",
+            structure_steel: "Steel Structure",
+            calculate_btn: "Calculate Settlements",
+            viz_title: "Dynamic Visualization",
+            results_title: "Calculation Results",
+            rigidity_check_title: "Rigidity Check",
+            max_settlement_title: "Calculated Maximum Settlement",
+            diff_settlement_check_title: "Differential Settlement Check",
+            toggle_solution_btn: "Show Detailed Solution",
+            toggle_solution_btn_hide: "Hide Detailed Solution",
+            chart_title: "Settlement Profile Graph",
+            solution_title: "Detailed Solution Walkthrough",
+            export_doc_btn: "Export to DOC",
+            footer_text: "© All rights reserved to Shlomi Shaul",
+            password_title: "Password Required",
+            password_subtitle: "A password is required to view the detailed solution or export the report.",
+            password_error: "Incorrect password!",
+            password_submit: "Submit",
+            password_cancel: "Cancel",
+            error_positive: "Please enter a positive numeric value.",
+            error_numeric: "Please enter a numeric value.",
+            legend_btn: "Legend",
+            rigidity_rigid: "The foundation is rigid",
+            rigidity_flexible: "The foundation is flexible",
+            rigidity_assumed_flexible: "Flexible foundation (assumed)",
+            rigidity_note_circular: "Rigidity was not checked (formula unavailable). Calculation performed as a flexible foundation (conservative).",
+            settlement_location_uniform: "Uniform settlement",
+            settlement_location_center: "At the foundation's center",
+            diff_settlement_ok: "Meets standard requirements",
+            diff_settlement_fail: "Exceeds standard requirements",
+            diff_settlement_details_text: "Differential settlement: {diff} cm, Allowable: {allowable} cm ({ratio})",
+            chart_y_axis_label: "Settlement (cm)",
+            chart_x_axis_label: "Location along foundation",
+            chart_dataset_label: "Settlement Profile (cm)",
+            chart_labels_rect: ['Edge 1', 'Quarter Length', 'Center', '3/4 Length', 'Edge 2'],
+            chart_labels_circ: ['Edge', 'Half Radius', 'Center'],
+            ground_text: "Soil",
+            sol_rigidity_title: "1. Foundation Rigidity Check (Hetenyi)",
+            sol_rigidity_p1: "To determine if the foundation behaves as rigid or flexible, the Hetenyi criterion is used for rectangular foundations.",
+            sol_legend_lambda: "Rigidity parameter (dimensionless)",
+            sol_legend_K: "Modulus of subgrade reaction (kN/m³)",
+            sol_legend_BL: "Width and length of foundation (m)",
+            sol_legend_E: "Elasticity modulus of foundation material (kPa)",
+            sol_legend_I: "Moment of inertia of foundation section (m⁴)",
+            sol_step_a: "Step A: Calculate Moment of Inertia (I)",
+            sol_legend_I_h: "Moment of inertia (m⁴)",
+            sol_legend_B_h: "Foundation width (m)",
+            sol_legend_h_h: "Foundation height/thickness (m)",
+            sol_step_b: "Step B: Calculate Rigidity Parameter (λL)",
+            sol_rigidity_conclusion: "Conclusion: Since {lambda} {comparison} {pi_approx}, the foundation is calculated as {status}.",
+            sol_rigidity_status_rigid: "rigid",
+            sol_rigidity_status_flexible: "flexible",
+            sol_rigidity_title_circ: "1. Foundation Rigidity Check",
+            sol_settlement_title: "2. Immediate (Elastic) Settlement Calculation",
+            sol_settlement_p1: "The general formula for elastic settlement:",
+            sol_legend_delta: "Foundation settlement (m)",
+            sol_legend_q0: "Load on foundation (kPa)",
+            sol_legend_B_prime: "Shortest dimension (Width B or Diameter D) (m)",
+            sol_legend_Es: "Young's modulus of soil (kPa)",
+            sol_legend_nu: "Poisson's ratio of soil",
+            sol_legend_Is: "Influence factor (depends on shape and location)",
+            sol_settlement_p2: "Influence factors (Is) by foundation shape (Source: Lecture 6, slide 9):",
+            table_shape: "Foundation Shape",
+            table_center: "Center",
+            table_corner: "Corner",
+            table_average: "Average",
+            sol_settlement_p3: "Settlement Calculation:",
+            sol_rigid_p1: "Since the foundation is rigid, its settlement is uniform. According to the course presentation (slide 10), a rigid foundation's settlement is about {reductionFactor}% of a flexible foundation's center settlement.",
+            sol_rigid_p2: "Flexible foundation's center settlement (for calculation):",
+            sol_rigid_p3: "Rigid foundation's settlement:",
+            sol_flexible_p1: "Since the foundation is flexible, the settlement is not uniform. The maximum settlement occurs at the center.",
+            sol_flexible_p2: "Center settlement calculation (maximum):",
+            sol_flexible_p3: "Corner settlement calculation:",
+            sol_flexible_p4: "Average settlement calculation:",
+            sol_flexible_p5: "The maximum settlement for subsequent checks is the center settlement: δ_max = {maxSettlement} cm",
+            sol_diff_title: "3. Differential Settlement Check (IS 940)",
+            sol_diff_p1: "Allowable differential settlement per IS 940, Table 3.1, for a {structureTypeName}:",
+            table_desc: "Structure Description",
+            table_angle: "Allowable Angular Distortion / Movement",
+            sol_diff_p2: "Actual differential settlement calculation:",
+            sol_diff_p3: "Allowable differential settlement calculation:",
+            sol_legend_dda: "Actual differential settlement (cm)",
+            sol_legend_dm: "Max settlement of current foundation (cm)",
+            sol_legend_da: "Adjacent foundation settlement (cm)",
+            sol_legend_ls: "Span between foundations (m)",
+            sol_diff_conclusion: "Conclusion: The differential settlement <strong>{status}</strong> the standard requirements.",
+            sol_diff_status_ok: "meets",
+            sol_diff_status_fail: "exceeds",
+        }
+    };
+
+    // --- DOM Elements ---
+    const allNumberInputs = document.querySelectorAll('input[type="number"]');
+    const foundation_shape_select = document.getElementById('foundation_shape');
+    const rectangular_inputs = document.getElementById('rectangular-inputs');
+    const circular_inputs = document.getElementById('circular-inputs');
+    const K_subgrade_input = document.getElementById('K_subgrade');
+    const calculateBtn = document.getElementById('calculate-btn');
+    const resultsContainer = document.getElementById('results-container');
+    const rigidityResultDiv = document.getElementById('rigidity-result');
+    const rigidityIcon = document.getElementById('rigidity-icon');
+    const rigidityText = document.getElementById('rigidity-text');
+    const lambdaValue = document.getElementById('lambda-value');
+    const settlementResultDiv = document.getElementById('settlement-result');
+    const settlementText = document.getElementById('settlement-text');
+    const settlementLocation = document.getElementById('settlement-location');
+    const diffSettlementResultDiv = document.getElementById('diff-settlement-result');
+    const diffSettlementIcon = document.getElementById('diff-settlement-icon');
+    const diffSettlementText = document.getElementById('diff-settlement-text');
+    const diffSettlementDetails = document.getElementById('diff-settlement-details');
+    const toggleSolutionBtn = document.getElementById('toggle-solution-btn');
+    const solutionSection = document.getElementById('solution-section');
+    const solutionContent = document.getElementById('solution-content');
+    const passwordModal = document.getElementById('password-modal');
+    const passwordInput = document.getElementById('password-input');
+    const passwordSubmitBtn = document.getElementById('password-submit');
+    const passwordCancelBtn = document.getElementById('password-cancel');
+    const passwordError = document.getElementById('password-error');
+    const exportDocBtn = document.getElementById('export-doc-btn');
+    const themeToggle = document.getElementById('theme-toggle');
+    const langToggle = document.getElementById('lang-toggle');
+    const lightIcon = document.getElementById('theme-icon-light');
+    const darkIcon = document.getElementById('theme-icon-dark');
+    const foundationCanvas = document.getElementById('foundation-canvas');
+    const ctxCanvas = foundationCanvas.getContext('2d');
+    const chartCanvas = document.getElementById('settlement-chart');
+    let settlementChart;
+
+    let calculationResults = {};
+    let isAuthenticated = false;
+    const CORRECT_PASSWORD = "58576";
+    let onAuthSuccess = null;
+
+    // --- Functions ---
+    
+    function setLanguage(lang) {
+        currentLanguage = lang;
+        const oppositeLang = lang === 'he' ? 'en' : 'he';
+        const htmlEl = document.documentElement;
+        htmlEl.setAttribute('lang', lang);
+        htmlEl.setAttribute('dir', lang === 'he' ? 'rtl' : 'ltr');
+        langToggle.textContent = oppositeLang.toUpperCase();
+        
+        document.querySelectorAll('[data-lang-key]').forEach(el => {
+            const key = el.dataset.langKey;
+            if (translations[lang][key]) {
+                const textNode = Array.from(el.childNodes).find(node => node.nodeType === Node.TEXT_NODE && node.nodeValue.trim() !== '');
+                if (textNode) {
+                    textNode.nodeValue = translations[lang][key];
+                } else {
+                    el.innerText = translations[lang][key];
+                }
+            }
+        });
+        
+        document.querySelectorAll('.input-group').forEach(group => {
+            const label = group.querySelector('label');
+            const tooltip = group.querySelector('.tooltip');
+            
+            if(label){
+                if (lang === 'he') {
+                    label.classList.add('right-3');
+                    label.classList.remove('left-3');
+                } else {
+                    label.classList.add('left-3');
+                    label.classList.remove('right-3');
+                }
+            }
+            
+            if(tooltip){
+                if (lang === 'he') {
+                    tooltip.classList.add('left-3');
+                    tooltip.classList.remove('right-3');
+                } else {
+                    tooltip.classList.add('right-3');
+                    tooltip.classList.remove('left-3');
+                }
+            }
+        });
+        
+        const controls = document.getElementById('controls-container');
+        const logo = document.getElementById('logo-img');
+        if (lang === 'he') {
+            controls.classList.remove('left-0');
+            controls.classList.add('right-0');
+            logo.classList.remove('right-0');
+            logo.classList.add('left-0');
+        } else { 
+            controls.classList.add('left-0');
+            controls.classList.remove('right-0');
+            logo.classList.add('right-0');
+            logo.classList.remove('left-0');
+        }
+
+        if (Object.keys(calculationResults).length > 0) {
+            calculationResults = performCalculations();
+            updateUI(calculationResults);
+            solutionContent.innerHTML = generateSolutionHTML();
+            if (window.MathJax) MathJax.typesetPromise([solutionContent]);
+        }
+        drawFoundation(calculationResults);
+        updateChart(calculationResults);
+        localStorage.setItem('language', lang);
+    }
+    
+    function applyTheme(isDark) {
+        const html = document.documentElement;
+        if (isDark) {
+            html.classList.add('dark');
+            lightIcon.classList.add('hidden');
+            darkIcon.classList.remove('hidden');
+        } else {
+            html.classList.remove('dark');
+            lightIcon.classList.remove('hidden');
+            darkIcon.classList.add('hidden');
+        }
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        drawFoundation(calculationResults);
+        updateChart(calculationResults);
+    }
+
+    function handleShapeChange() {
+        const shape = foundation_shape_select.value;
+        const kSubgradeGroup = K_subgrade_input.closest('.input-group');
+        if (shape === 'rectangular') {
+            rectangular_inputs.classList.remove('hidden');
+            circular_inputs.classList.add('hidden');
+            kSubgradeGroup.style.opacity = '1';
+            K_subgrade_input.disabled = false;
+        } else {
+            rectangular_inputs.classList.add('hidden');
+            circular_inputs.classList.remove('hidden');
+            kSubgradeGroup.style.opacity = '0.5';
+            K_subgrade_input.disabled = true;
+        }
+        drawFoundation();
+    }
+
+    function drawFoundation(settlementProfile = null) {
+        const shape = foundation_shape_select.value;
+        const B = parseFloat(document.getElementById('B').value) || 2.5;
+        const D = parseFloat(document.getElementById('D').value) || 3.0;
+        const { width, height } = foundationCanvas.getBoundingClientRect();
+        foundationCanvas.width = width;
+        foundationCanvas.height = height;
+        const isDark = document.documentElement.classList.contains('dark');
+        ctxCanvas.clearRect(0, 0, width, height);
+
+        const foundationColor = isDark ? '#64748b' : '#a1a1aa';
+        const soilColor = isDark ? '#475569' : '#d4d4d8';
+        const lineColor = isDark ? '#f8fafc' : '#0f172a';
+        
+        let fY = height * 0.4;
+        const groundLevel = fY + height * 0.1;
+        ctxCanvas.fillStyle = soilColor;
+        ctxCanvas.fillRect(0, groundLevel, width, height - groundLevel);
+        ctxCanvas.strokeStyle = lineColor;
+        ctxCanvas.beginPath();
+        ctxCanvas.moveTo(0, groundLevel);
+        ctxCanvas.lineTo(width, groundLevel);
+        ctxCanvas.stroke();
+        ctxCanvas.fillStyle = lineColor;
+        ctxCanvas.font = "14px " + (currentLanguage === 'he' ? 'Assistant' : 'Roboto');
+        ctxCanvas.textAlign = currentLanguage === 'he' ? 'right' : 'left';
+        ctxCanvas.fillText(translations[currentLanguage].ground_text, currentLanguage === 'he' ? width - 20 : 20, height - 20);
+
+        ctxCanvas.fillStyle = foundationColor;
+        let settlementScale = 0;
+        if (settlementProfile && settlementProfile.maxSettlement) {
+            settlementScale = height * 0.05 * (settlementProfile.maxSettlement/5);
+        }
+        
+        const fWidth = width * 0.6;
+        const fHeight = height * 0.1;
+        const fX = (width - fWidth) / 2;
+        fY = groundLevel - fHeight;
+        
+        ctxCanvas.beginPath();
+        if (!settlementProfile || settlementProfile.isRigid) {
+            ctxCanvas.rect(fX, fY + settlementScale, fWidth, fHeight);
+        } else {
+            ctxCanvas.moveTo(fX, fY + settlementScale);
+            ctxCanvas.quadraticCurveTo(fX + fWidth / 2, fY + settlementScale * 1.5, fX + fWidth, fY + settlementScale);
+            ctxCanvas.lineTo(fX + fWidth, fY + fHeight + settlementScale * 1.5);
+            ctxCanvas.quadraticCurveTo(fX + fWidth / 2, fY + fHeight + settlementScale * 2, fX, fY + fHeight + settlementScale * 1.5);
+            ctxCanvas.closePath();
+        }
+        ctxCanvas.fill();
+        
+        ctxCanvas.strokeStyle = '#ef4444';
+        ctxCanvas.fillStyle = '#ef4444';
+        ctxCanvas.beginPath();
+        ctxCanvas.moveTo(fX, groundLevel + 15); ctxCanvas.lineTo(fX, groundLevel + 25);
+        ctxCanvas.moveTo(fX + fWidth, groundLevel + 15); ctxCanvas.lineTo(fX + fWidth, groundLevel + 25);
+        ctxCanvas.moveTo(fX, groundLevel + 20); ctxCanvas.lineTo(fX + fWidth, groundLevel + 20);
+        ctxCanvas.stroke();
+        ctxCanvas.textAlign = 'center';
+        
+        const dimText = shape === 'rectangular' ? `B = ${B}m` : `D = ${D}m`;
+        ctxCanvas.fillText(dimText, width / 2, groundLevel + 35);
+    }
+    
+    function updateChart(results) {
+        const lang = currentLanguage;
+        const isDark = document.documentElement.classList.contains('dark');
+        const fontColor = isDark ? 'white' : 'black';
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            color: fontColor,
+            scales: {
+                y: { beginAtZero: true, reverse: true, title: { display: true, text: translations[lang].chart_y_axis_label, color: fontColor }, ticks: { color: fontColor } },
+                x: { title: { display: true, text: translations[lang].chart_x_axis_label, color: fontColor }, ticks: { color: fontColor } }
+            },
+            plugins: { legend: { labels: { color: fontColor } } }
+        };
+        let chartData;
+        if (!results || Object.keys(results).length === 0) {
+            chartData = { labels: [], datasets: [] };
+        } else {
+            const { shape, isRigid, settlementCenter, settlementCorner, settlementAvg } = results;
+            let labels, data;
+            if (shape === 'rectangular') {
+                labels = translations[lang].chart_labels_rect;
+                if (isRigid) {
+                    data = Array(5).fill(settlementAvg);
+                } else {
+                    data = [settlementCorner, (settlementCorner + settlementCenter) / 1.8, settlementCenter, (settlementCorner + settlementCenter) / 1.8, settlementCorner];
+                }
+            } else { 
+                labels = translations[lang].chart_labels_circ;
+                data = [results.settlementCorner, (results.settlementCorner + settlementCenter) / 2, settlementCenter];
+            }
+            chartData = {
+                labels: labels,
+                datasets: [{
+                    label: translations[lang].chart_dataset_label,
+                    data: data,
+                    borderColor: 'var(--primary)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            };
+        }
+        if (settlementChart) settlementChart.destroy();
+        settlementChart = new Chart(chartCanvas, { type: 'line', data: chartData, options: chartOptions });
+    }
+
+    function getInfluenceFactor(shape, L, B) {
+        if (shape === 'circular') return { center: 1.00, edge: 0.64, average: 0.85 };
+        const ratio = L / B;
+        if (ratio <= 1.0) return { center: 1.12, corner: 0.56, average: 0.96 };
+        if (ratio <= 1.5) return { center: 1.36, corner: 0.68, average: 1.15 };
+        if (ratio <= 2.0) return { center: 1.52, corner: 0.76, average: 1.30 };
+        if (ratio <= 5.0) return { center: 2.10, corner: 1.05, average: 1.83 };
+        return { center: 2.54, corner: 1.27, average: 2.25 };
+    }
+
+    function validateInputs() {
+        let isValid = true;
+        const lang = currentLanguage;
+        allNumberInputs.forEach(input => {
+            const errorDiv = input.closest('.input-group').querySelector('.input-error-message');
+            const value = parseFloat(input.value);
+            let isFieldValid = true;
+
+            if (isNaN(value)) {
+                isFieldValid = false;
+                errorDiv.textContent = translations[lang].error_numeric;
+            } else if (input.id !== 'settlement_adjacent' && value <= 0) {
+                isFieldValid = false;
+                errorDiv.textContent = translations[lang].error_positive;
+            }
+
+            if (!isFieldValid) {
+                if (!input.disabled) {
+                    input.classList.add('invalid');
+                    errorDiv.style.display = 'block';
+                    isValid = false;
+                }
+            } else {
+                input.classList.remove('invalid');
+                errorDiv.style.display = 'none';
+            }
+        });
+        return isValid;
+    }
+
+    function performCalculations() {
+        const shape = document.getElementById('foundation_shape').value;
+        const E_concrete_MPa = parseFloat(document.getElementById('E_concrete').value);
+        const q_applied = parseFloat(document.getElementById('q_applied').value);
+        const E_soil_kPa = parseFloat(document.getElementById('E_soil').value);
+        const v = parseFloat(document.getElementById('poisson_ratio').value);
+        const reductionFactor = 0.79;
+        
+        let L, B, D, H, K_subgrade, I, lambda_L, isRigid, pi_over_4, rigidity_note = '';
+        let settlementCenter_m, settlementCorner_m, settlementAvg_m, maxSettlement_m;
+        
+        const Is_factors_rect = (L_val, B_val) => getInfluenceFactor('rectangular', L_val, B_val);
+        const Is_factors_circ = getInfluenceFactor('circular');
+
+        if (shape === 'rectangular') {
+            L = parseFloat(document.getElementById('L').value);
+            B = parseFloat(document.getElementById('B').value);
+            H = parseFloat(document.getElementById('H').value);
+            K_subgrade = parseFloat(document.getElementById('K_subgrade').value);
+            const E_concrete_kPa = E_concrete_MPa * 1000;
+            I = (B * Math.pow(H, 3)) / 12;
+            const lambda_L_numerator = K_subgrade * B * Math.pow(L, 4);
+            const lambda_L_denominator = 4 * E_concrete_kPa * I;
+            lambda_L = Math.pow(lambda_L_numerator / lambda_L_denominator, 0.25);
+            pi_over_4 = Math.PI / 4;
+            isRigid = lambda_L < pi_over_4;
+            
+            const factors = Is_factors_rect(L, B);
+            settlementCenter_m = (q_applied * B * (1 - Math.pow(v, 2)) / E_soil_kPa) * factors.center;
+            settlementCorner_m = (q_applied * B * (1 - Math.pow(v, 2)) / E_soil_kPa) * factors.corner;
+            settlementAvg_m = (q_applied * B * (1 - Math.pow(v, 2)) / E_soil_kPa) * factors.average;
+
+            if (isRigid) {
+                maxSettlement_m = settlementCenter_m * reductionFactor;
+                settlementCenter_m = maxSettlement_m;
+                settlementAvg_m = maxSettlement_m;
+                settlementCorner_m = maxSettlement_m;
+            } else {
+                maxSettlement_m = settlementCenter_m;
+            }
+        } else {
+            D = parseFloat(document.getElementById('D').value);
+            H = parseFloat(document.getElementById('H').value);
+            isRigid = false;
+            rigidity_note = translations[currentLanguage].rigidity_note_circular;
+            
+            settlementCenter_m = (q_applied * D * (1 - Math.pow(v, 2)) / E_soil_kPa) * Is_factors_circ.center;
+            settlementCorner_m = (q_applied * D * (1 - Math.pow(v, 2)) / E_soil_kPa) * Is_factors_circ.edge;
+            settlementAvg_m = (q_applied * D * (1 - Math.pow(v, 2)) / E_soil_kPa) * Is_factors_circ.average;
+            maxSettlement_m = settlementCenter_m;
+        }
+
+        const maxSettlement_cm = maxSettlement_m * 100;
+        const L_span = parseFloat(document.getElementById('L_span').value);
+        const settlement_adjacent_cm = parseFloat(document.getElementById('settlement_adjacent').value);
+        const structure_type = document.getElementById('structure_type').value;
+        const diffSettlement_cm = Math.abs(maxSettlement_cm - settlement_adjacent_cm);
+        let allowableSettlement_cm, allowable_ratio_str = '';
+        
+        switch(structure_type) {
+            case 'rigid': allowableSettlement_cm = (L_span * 100) / 500; allowable_ratio_str = 'L/500'; break;
+            case 'steel': allowableSettlement_cm = (L_span * 100) / 200; allowable_ratio_str = 'L/200'; break;
+            default: allowableSettlement_cm = (L_span * 100) / 250; allowable_ratio_str = 'L/250'; break;
+        }
+        const isDiffSettlementOk = diffSettlement_cm <= allowableSettlement_cm;
+        
+        const structureTypeElement = document.querySelector(`#structure_type option[value="${structure_type}"]`);
+        const structureTypeName = structureTypeElement ? translations[currentLanguage][structureTypeElement.dataset.langKey] : structure_type;
+
+        return calculationResults = {
+            shape, L, B, D, H, E_concrete_MPa, q_applied, K_subgrade, E_soil_kPa, v, L_span, settlement_adjacent_cm, structure_type, structureTypeName,
+            I, lambda_L, E_concrete_kPa: E_concrete_MPa * 1000, pi_over_4, isRigid, rigidity_note,
+            settlementCenter: settlementCenter_m * 100, settlementCorner: settlementCorner_m * 100, settlementAvg: settlementAvg_m * 100,
+            maxSettlement: maxSettlement_cm,
+            diffSettlement: diffSettlement_cm, allowableSettlement: allowableSettlement_cm,
+            allowable_ratio_str, isDiffSettlementOk, reductionFactor
+        };
+    }
+
+    function updateUI(results) {
+        const lang = currentLanguage;
+        resultsContainer.classList.remove('hidden');
+        if (results.shape === 'rectangular') {
+            rigidityText.textContent = results.isRigid ? translations[lang].rigidity_rigid : translations[lang].rigidity_flexible;
+            lambdaValue.textContent = `λL = ${results.lambda_L.toFixed(3)}, π/4 = ${results.pi_over_4.toFixed(3)}`;
+            rigidityResultDiv.className = `p-4 rounded-lg flex items-center gap-4 ${results.isRigid ? 'bg-blue-100 dark:bg-blue-900' : 'bg-purple-100 dark:bg-purple-900'}`;
+            rigidityIcon.textContent = results.isRigid ? '☰' : '〰️';
+        } else {
+            rigidityText.textContent = translations[lang].rigidity_assumed_flexible;
+            lambdaValue.textContent = results.rigidity_note;
+            rigidityResultDiv.className = 'p-4 rounded-lg flex items-center gap-4 bg-purple-100 dark:bg-purple-900';
+            rigidityIcon.textContent = '⚫';
+        }
+        settlementText.textContent = `${results.maxSettlement.toFixed(3)} cm`;
+        settlementLocation.textContent = (results.shape === 'rectangular' && results.isRigid) ? translations[lang].settlement_location_uniform : translations[lang].settlement_location_center;
+        diffSettlementText.textContent = results.isDiffSettlementOk ? translations[lang].diff_settlement_ok : translations[lang].diff_settlement_fail;
+        diffSettlementDetails.textContent = translations[lang].diff_settlement_details_text
+            .replace('{diff}', results.diffSettlement.toFixed(2))
+            .replace('{allowable}', results.allowableSettlement.toFixed(2))
+            .replace('{ratio}', results.allowable_ratio_str);
+        diffSettlementResultDiv.className = `p-4 rounded-lg md:col-span-2 flex items-center gap-4 ${results.isDiffSettlementOk ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`;
+        diffSettlementIcon.textContent = results.isDiffSettlementOk ? '✅' : '❌';
+    }
+    
+    function generateSolutionHTML() {
+        const r = calculationResults;
+        const t = translations[currentLanguage];
+        const legendBtn = `<button class="legend-toggle-btn">${t.legend_btn}</button>`;
+        let rigidityCheckHTML = '';
+
+        if (r.shape === 'rectangular') {
+            const conclusionText = t.sol_rigidity_conclusion
+                .replace('{lambda}', r.lambda_L.toFixed(3))
+                .replace('{comparison}', r.isRigid ? '<' : '>')
+                .replace('{pi_approx}', r.pi_over_4.toFixed(3))
+                .replace('{status}', r.isRigid ? t.sol_rigidity_status_rigid : t.sol_rigidity_status_flexible);
+
+            rigidityCheckHTML = `
+                <h3 class="solution-h3">${t.sol_rigidity_title}</h3>
+                <p class="solution-p">${t.sol_rigidity_p1}</p>
+                <div class="solution-box">
+                    <div class="math-formula">$$ \\lambda_L = \\sqrt[4]{\\frac{K \\cdot B \\cdot L^4}{4 \\cdot E \\cdot I}} $$</div>
+                    ${legendBtn}
+                    <div class="solution-legend">
+                        \\( \\lambda_L \\) - ${t.sol_legend_lambda}<br>
+                        \\( K \\) - ${t.sol_legend_K}<br>
+                        \\( B, L \\) - ${t.sol_legend_BL}<br>
+                        \\( E \\) - ${t.sol_legend_E}<br>
+                        \\( I \\) - ${t.sol_legend_I}
+                    </div>
+                </div>
+                <p class="solution-p"><strong>${t.sol_step_a}</strong></p>
+                <div class="solution-box">
+                    <div class="math-formula">$$I = \\frac{B \\cdot h^3}{12} = \\frac{${r.B} \\cdot ${r.H}^3}{12} = ${r.I.toFixed(5)} \\, m^4$$</div>
+                    ${legendBtn}
+                    <div class="solution-legend">
+                        \\( I \\) - ${t.sol_legend_I_h}<br>
+                        \\( B \\) - ${t.sol_legend_B_h}<br>
+                        \\( h \\) - ${t.sol_legend_h_h}
+                    </div>
+                </div>
+                <p class="solution-p"><strong>${t.sol_step_b}</strong></p>
+                <div class="solution-box">
+                    <div class="math-formula">$$ \\lambda_L = \\sqrt[4]{\\frac{${r.K_subgrade} \\cdot ${r.B} \\cdot ${r.L}^4}{4 \\cdot ${r.E_concrete_kPa} \\cdot ${r.I.toFixed(5)}}} = ${r.lambda_L.toFixed(3)}$$</div>
+                </div>
+                <div class="solution-result-box">${conclusionText}</div>`;
+        } else {
+             rigidityCheckHTML = `<h3 class="solution-h3">${t.sol_rigidity_title_circ}</h3><div class="solution-result-box bg-purple-100 dark:bg-purple-900 border-purple-200 dark:border-purple-700">${r.rigidity_note}</div>`;
+        }
+
+        const Is_factors = getInfluenceFactor(r.shape, r.L, r.B);
+        let settlementCalcHTML = `<h3 class="solution-h3">${t.sol_settlement_title}</h3>
+        <div class="solution-box">
+            <p class="solution-p">${t.sol_settlement_p1}</p>
+            <div class="math-formula">$$ \\delta = q_0 \\cdot B' \\frac{1 - \\nu^2}{E_s} \\cdot I_s $$</div>
+            ${legendBtn}
+            <div class="solution-legend">
+                 \\(\\delta\\) - ${t.sol_legend_delta}<br>
+                \\(q_0\\) - ${t.sol_legend_q0}<br>
+                \\(B'\\) - ${t.sol_legend_B_prime}<br>
+                \\(E_s\\) - ${t.sol_legend_Es}<br>
+                \\(\\nu\\) - ${t.sol_legend_nu}<br>
+                \\(I_s\\) - ${t.sol_legend_Is}
+            </div>
+        </div>
+        <p class="solution-p">${t.sol_settlement_p2}</p>
+        <table class="styled-table"><thead><tr><th>${t.table_shape}</th><th>${t.table_center}</th><th>${t.table_corner}</th><th>${t.table_average}</th></tr></thead><tbody><tr><td>Square (L/B=1)</td><td>1.12</td><td>0.56</td><td>0.96</td></tr><tr><td>Rectangle (L/B=2)</td><td>1.52</td><td>0.76</td><td>1.30</td></tr><tr><td>Rectangle (L/B=5)</td><td>2.10</td><td>1.05</td><td>1.83</td></tr><tr><td>Circle (B=D)</td><td>1.00</td><td>0.64</td><td>0.85</td></tr></tbody></table>
+        <p class="solution-p mt-4"><strong>${t.sol_settlement_p3}</strong></p>`;
+        
+        if(r.isRigid){
+            settlementCalcHTML += `<p class="solution-p">${t.sol_rigid_p1.replace('{reductionFactor}', r.reductionFactor * 100)}</p>
+            <div class="solution-box">
+                <p class="solution-note">${t.sol_rigid_p2}</p>
+                <div class="math-formula">$$ \\delta_{flexible, center} = ${r.q_applied} \\cdot ${r.B} \\frac{1 - ${r.v}^2}{${r.E_soil_kPa}} \\cdot ${Is_factors.center} = ${(r.maxSettlement / r.reductionFactor).toFixed(3)} \\, cm $$</div>
+                <p class="solution-note mt-4">${t.sol_rigid_p3}</p>
+                <div class="math-formula">$$ \\delta_{rigid} = \\delta_{flexible, center} \\cdot ${r.reductionFactor} = ${(r.maxSettlement / r.reductionFactor).toFixed(3)} \\cdot ${r.reductionFactor} $$</div>
+                <div class="solution-result-box mt-4">δ_rigid = ${r.maxSettlement.toFixed(3)} cm</div>
+            </div>`
+        } else {
+            const dimension = r.shape === 'rectangular' ? r.B : r.D;
+            const factors = r.shape === 'rectangular' ? getInfluenceFactor('rectangular', r.L, r.B) : getInfluenceFactor('circular');
+            settlementCalcHTML += `<p class="solution-p">${t.sol_flexible_p1}</p>
+            <div class="solution-box">
+                <p class="solution-note">${t.sol_flexible_p2}</p>
+                <div class="math-formula">$$ \\delta_{center} = ${r.q_applied} \\cdot ${dimension} \\frac{1 - ${r.v}^2}{${r.E_soil_kPa}} \\cdot ${factors.center} = ${r.settlementCenter.toFixed(3)} \\, cm$$</div>
+            </div>
+            <div class="solution-box">
+                <p class="solution-note">${t.sol_flexible_p3}</p>
+                <div class="math-formula">$$ \\delta_{corner} = ${r.q_applied} \\cdot ${dimension} \\frac{1 - ${r.v}^2}{${r.E_soil_kPa}} \\cdot ${factors.corner} = ${r.settlementCorner.toFixed(3)} \\, cm$$</div>
+            </div>
+            <div class="solution-box">
+                 <p class="solution-note">${t.sol_flexible_p4}</p>
+                <div class="math-formula">$$ \\delta_{avg} = ${r.q_applied} \\cdot ${dimension} \\frac{1 - ${r.v}^2}{${r.E_soil_kPa}} \\cdot ${factors.average} = ${r.settlementAvg.toFixed(3)} \\, cm$$</div>
+            </div>
+            <div class="solution-result-box mt-4">${t.sol_flexible_p5.replace('{maxSettlement}', r.maxSettlement.toFixed(3))}</div>`;
+        }
+
+        const diffConclusion = t.sol_diff_conclusion.replace('{status}', r.isDiffSettlementOk ? t.sol_diff_status_ok : t.sol_diff_status_fail);
+
+        const diffSettlementHTML = `<h3 class="solution-h3">${t.sol_diff_title}</h3>
+        <p class="solution-p">${t.sol_diff_p1.replace('{structureTypeName}', r.structureTypeName)}</p>
+        <table class="styled-table"><thead><tr><th>${t.table_desc}</th><th>${t.table_angle}</th></tr></thead><tbody><tr><td>${t.structure_rigid}</td><td>L/500</td></tr><tr><td>${t.structure_regular}</td><td>L/250</td></tr><tr><td>${t.structure_steel}</td><td>L/200</td></tr></tbody></table>
+        <div class="solution-box mt-4">
+            <p class="solution-note">${t.sol_diff_p2}</p>
+            <div class="math-formula">$$ \\Delta\\delta_{actual} = |\\delta_{max} - \\delta_{adjacent}| = |${r.maxSettlement.toFixed(2)} - ${r.settlement_adjacent_cm}| = ${r.diffSettlement.toFixed(2)} \\, cm $$</div>
+             <p class="solution-note mt-4">${t.sol_diff_p3}</p>
+            <div class="math-formula">$$ \\Delta\\delta_{allowable} = \\frac{L_{span}}{factor} = \\frac{${r.L_span * 100} \\, cm}{${r.allowable_ratio_str.substring(2)}} = ${r.allowableSettlement.toFixed(2)} \\, cm $$</div>
+            ${legendBtn}
+            <div class="solution-legend">
+                 \\(\\Delta\\delta_{actual}\\) - ${t.sol_legend_dda}<br>
+                \\(\\delta_{max}\\) - ${t.sol_legend_dm}<br>
+                \\(\\delta_{adjacent}\\) - ${t.sol_legend_da}<br>
+                \\(L_{span}\\) - ${t.sol_legend_ls}
+            </div>
+        </div>
+        <div class="solution-result-box ${r.isDiffSettlementOk ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}">${diffConclusion}</div>`;
+        
+        return `<div>${rigidityCheckHTML}${settlementCalcHTML}${diffSettlementHTML}</div>`;
+    }
+    
+    function requestPassword(callback) {
+        onAuthSuccess = callback;
+        passwordModal.classList.remove('hidden');
+        passwordInput.focus();
+    }
+
+    passwordSubmitBtn.addEventListener('click', () => {
+        if (passwordInput.value === CORRECT_PASSWORD) {
+            isAuthenticated = true;
+            passwordModal.classList.add('hidden');
+            passwordInput.value = '';
+            passwordError.classList.add('hidden');
+            if(onAuthSuccess) onAuthSuccess();
+            onAuthSuccess = null;
+        } else {
+            passwordError.classList.remove('hidden');
+        }
+    });
+    
+    passwordCancelBtn.addEventListener('click', () => {
+        passwordModal.classList.add('hidden');
+        passwordInput.value = '';
+        passwordError.classList.add('hidden');
+        onAuthSuccess = null;
+    });
+
+    calculateBtn.addEventListener('click', () => {
+        if (!validateInputs()) {
+            return;
+        }
+        calculationResults = performCalculations();
+        updateUI(calculationResults);
+        drawFoundation(calculationResults);
+        updateChart(calculationResults);
+        solutionContent.innerHTML = generateSolutionHTML();
+        if (window.MathJax) {
+            MathJax.typesetPromise([solutionContent]);
+        }
+        if (!solutionSection.classList.contains('hidden')) {
+            solutionSection.classList.add('hidden');
+            toggleSolutionBtn.textContent = translations[currentLanguage].toggle_solution_btn;
+        }
+    });
+    
+    themeToggle.addEventListener('click', () => {
+        const isDark = !document.documentElement.classList.contains('dark');
+        applyTheme(isDark);
+    });
+    
+    langToggle.addEventListener('click', () => {
+        const newLang = currentLanguage === 'he' ? 'en' : 'he';
+        setLanguage(newLang);
+    });
+
+    solutionContent.addEventListener('click', function(event) {
+        if (event.target.classList.contains('legend-toggle-btn')) {
+            const legend = event.target.nextElementSibling;
+            if(legend && legend.classList.contains('solution-legend')) {
+                if (legend.style.maxHeight && legend.style.maxHeight !== '0px') {
+                    legend.style.maxHeight = '0px';
+                } else {
+                    legend.style.maxHeight = legend.scrollHeight + "px";
+                }
+            }
+        }
+    });
+
+    toggleSolutionBtn.addEventListener('click', () => {
+        const action = () => {
+            const isHidden = solutionSection.classList.toggle('hidden');
+            toggleSolutionBtn.textContent = isHidden ? translations[currentLanguage].toggle_solution_btn : translations[currentLanguage].toggle_solution_btn_hide;
+             if(!isHidden) {
+                solutionSection.scrollIntoView({ behavior: 'smooth' });
+            }
+        };
+        if(isAuthenticated) action();
+        else requestPassword(action);
+    });
+    
+    function exportDoc(htmlContent, filename) {
+        const lang = currentLanguage;
+        const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Calculation Report</title><style>body{font-family:${lang==='he'?'Arial':'Roboto'};direction:${lang==='he'?'rtl':'ltr'};} table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ddd;padding:8px;} .math-formula{text-align:center;font-size:1.2em;}</style></head><body>`;
+        const footer = "</body></html>";
+        const sourceHTML = header + htmlContent.replace(/<div class="page-break"[^>]*>/g, '<br style="page-break-before:always">') + footer;
+        const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+        const fileDownload = document.createElement("a");
+        document.body.appendChild(fileDownload);
+        fileDownload.href = source;
+        fileDownload.download = filename;
+        fileDownload.click();
+        document.body.removeChild(fileDownload);
+    }
+    
+    const exportAction = () => {
+        if (Object.keys(calculationResults).length === 0) {
+            alert(currentLanguage === 'he' ? "יש לבצע חישוב תחילה." : "Please perform a calculation first.");
+            return;
+        }
+        if (!isAuthenticated) {
+             requestPassword(() => exportAction());
+             return;
+        }
+        
+        const reportElement = document.createElement('div');
+        reportElement.innerHTML = generateSolutionHTML();
+        
+        MathJax.typesetPromise([reportElement]).then(() => {
+            exportDoc(reportElement.innerHTML, 'Settlement_Calculation_Report.doc');
+        });
+    };
+    
+    exportDocBtn.addEventListener('click', exportAction);
+
+    // --- Initial Setup ---
+    const preferredLang = localStorage.getItem('language') || 'he';
+    setLanguage(preferredLang);
+    const preferredTheme = localStorage.getItem('theme');
+    applyTheme(preferredTheme === 'dark' || (preferredTheme === null && window.matchMedia('(prefers-color-scheme: dark)').matches));
+    handleShapeChange();
+    updateChart(null);
+});
+</script>
+</body>
+</html>
